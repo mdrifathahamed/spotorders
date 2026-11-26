@@ -82,7 +82,7 @@ n119219107,Ravintola 91.1,restaurant,,60.196604,24.944229,Mo-Fr 07:00-15:00,8811
 n119220002,Ravintola Musta Härkä,restaurant,,60.196627,24.951215,Mo-Tu 09:00-02:00; We-Sa 09:00-04:00; Su 11:00-02:00,881126d045fffff,891126d044fffff,False,1.2,True,4
 n119221468,K-Market,convenience,K-Market,60.19731,24.94943,Mo-Fr 07:00-22:00; Sa 09:00-21:00; Su 09:00-21:00,881126d045fffff,891126d044fffff,False,1.0,True,4
 n119222853,Cheng Long,restaurant,,60.195157,24.954863,"Tu-Fr 10:30-21:00; Sa,Su 12:00-21:00; Mo off",881126d06bfffff,891126d06b3ffff,False,1.2,True,3
-n119226383,Ravintola Mashiro,restaurant,,60.193738,24.957922,"Mo-Fr 10:30-23:00; Sa,Su off",881126d06bfffff,891126d06a3ffff,False,1.2,True,3
+n119226383,Ravintola Mashiro,restaurant,,60.193738,24.957922,"Mo-Fr 10:30-23:00; Sa,Su off",881126d06bfffff,891126d06a3ffff,True,3.5999999999999996,True,3
 n119230655,Alepa,convenience,Alepa,60.191773,24.962078,Mo-Fr 06:30-23:00; Sa 08:00-23:00; Su 09:00-23:00,881126d06bfffff,891126d06abffff,False,1.0,True,-1
 n123432045,Vihreä Keidas ry,fast_food,,60.186962,24.965591,,881126d061fffff,891126d060fffff,False,1.5,False,61
 n143520127,Chico's Viikki,restaurant,,60.227259,25.00929,Mo-Fr 10:30-20:00; Sa 11:00-20:00; Su 11:00-19:00,881126d0e9fffff,891126d0167ffff,False,1.2,True,-1
