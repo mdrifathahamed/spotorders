@@ -1,6 +1,9 @@
 package io.github.mdrifathahamed.spotorders
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -11,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.lifecycleScope
 import io.github.mdrifathahamed.spotorders.data.AppDb
@@ -18,6 +22,7 @@ import io.github.mdrifathahamed.spotorders.data.AppSettings
 import io.github.mdrifathahamed.spotorders.data.EventType
 import io.github.mdrifathahamed.spotorders.export.CsvExporter
 import io.github.mdrifathahamed.spotorders.location.LocationLoggerService
+import io.github.mdrifathahamed.spotorders.overlay.FloatingButtons
 import io.github.mdrifathahamed.spotorders.sync.EventRecorder
 import io.github.mdrifathahamed.spotorders.sync.SyncWorker
 import io.github.mdrifathahamed.spotorders.ui.HomeScreen
@@ -32,6 +37,9 @@ import java.util.Date
 class MainActivity : ComponentActivity() {
     private val dao by lazy { AppDb.get(this).dao() }
     private val settings by lazy { AppSettings(this) }
+
+    /** Re-checked in onResume, after the user comes back from the overlay settings page. */
+    private val overlayAllowed = mutableStateOf(false)
 
     private val askPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()) { }
@@ -72,8 +80,24 @@ class MainActivity : ComponentActivity() {
                     },
                     onSyncNow = { SyncWorker.enqueue(this); refresh.intValue++ },
                     onExport = { lifecycleScope.launch { CsvExporter.export(this@MainActivity) } },
+                    overlayAllowed = overlayAllowed.value,
+                    onAllowOverlay = {
+                        startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:$packageName")))
+                    },
+                    onShowButtons = { FloatingButtons.show(this) },
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        overlayAllowed.value = FloatingButtons.canDraw(this)
+        // came back from granting the permission mid-shift: show the buttons straight away
+        lifecycleScope.launch {
+            val last = dao.lastEventNow()
+            if (overlayAllowed.value && last != null && last.type != EventType.SHIFT_END) FloatingButtons.show(this@MainActivity)
         }
     }
 

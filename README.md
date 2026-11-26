@@ -31,8 +31,8 @@ where I wait the least, by hour, weekday and weather.
  phone (during a shift)                    GitHub
  ─────────────────────                     ──────────────────────────────────────────────
  Start shift ─┐                            spotorders-data (PRIVATE)
- Got order ───┼─ saved on phone ──upload──► live/events.csv   every button press
- Free again ──┤  + GPS every 15 s          live/fixes/*.csv  GPS track
+ O (order) ───┼─ saved on phone ──upload──► live/events.csv   every button press
+ D (deliver) ─┤  + GPS every 15 s          live/fixes/*.csv  GPS track
  End shift ───┘                                   │
                                                   ▼  workflow starts within a minute
                                            spotorders (PUBLIC, this repo)
@@ -40,8 +40,10 @@ where I wait the least, by hour, weekday and weather.
                                            → data/sample/*.csv, figures/*.png (summaries only)
 ```
 
-1. **During a shift I only press buttons.** "Got order" and "Free again" sit in the phone's notification,
-   so I never open the app on the road. Each press saves the time and my GPS position.
+1. **During a shift I only press buttons.** Two floating buttons sit on top of every app, like old
+   Messenger chat heads: **O** when I get an order, **D** when it's delivered. With the phone in a holder and
+   winter gloves on, one big tap beats pulling down the notification shade. Each press saves the time and my
+   GPS position. (The same buttons are also in the notification.)
 2. **The app uploads automatically** to a private GitHub repo whenever there is internet. With no signal,
    it waits and retries.
 3. **Each new order triggers a GitHub Actions run** that rebuilds the dataset: it measures how long I waited
@@ -58,7 +60,7 @@ My GPS track shows where I live and when I work, so I treat it as private from t
   to 15 minutes, no calendar dates, no exact coordinates, no earnings.
 - **Drop-off locations are never recorded**, so nothing about customers is ever stored.
 - The GitHub token on the phone is encrypted with the Android Keystore and only sent to api.github.com.
-- One-tap input only, from the notification. The app is never meant to be used while riding.
+- One-tap input only. Buttons are pressed at the restaurant or the customer's door, never while riding.
 
 ## What the data say so far
 
@@ -87,7 +89,7 @@ I'll add a before/after chart here once the app has logged enough shifts.
 | Phase | What | Status |
 |---|---|---|
 | 1 | Dataset from screenshots, weather join, first heatmaps | done |
-| 2 | Android logger: GPS, notification buttons, automatic upload to GitHub | done, in daily use |
+| 2 | Android logger: GPS, floating O/D buttons, automatic upload to GitHub | done, in daily use |
 | 3 | Hexagon map in the app: expected wait now, nearest good spot | next |
 | 4 | Model: smoothed statistics → gradient boosting, OpenStreetMap restaurant density as a prior | baseline in `pipeline/baseline.py` |
 

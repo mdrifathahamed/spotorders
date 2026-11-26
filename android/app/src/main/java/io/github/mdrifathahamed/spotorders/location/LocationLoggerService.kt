@@ -23,6 +23,7 @@ import io.github.mdrifathahamed.spotorders.MainActivity
 import io.github.mdrifathahamed.spotorders.data.AppDb
 import io.github.mdrifathahamed.spotorders.data.EventType
 import io.github.mdrifathahamed.spotorders.data.Fix
+import io.github.mdrifathahamed.spotorders.overlay.FloatingButtons
 import io.github.mdrifathahamed.spotorders.sync.EventReceiver
 import io.github.mdrifathahamed.spotorders.sync.SyncWorker
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +44,7 @@ import java.time.format.DateTimeFormatter
  */
 class LocationLoggerService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var started = false
     private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
 
     private val callback = object : LocationCallback() {
@@ -63,6 +65,9 @@ class LocationLoggerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val type = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
         ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(this, "Waiting for an order"), type)
+        FloatingButtons.show(this)          // O / D bubble over every app (if allowed)
+        if (started) return START_STICKY   // e.g. "Show O/D" tapped: buttons shown above, nothing else to redo
+        started = true
         val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15_000L)
             .setMinUpdateDistanceMeters(20f)
             .build()
@@ -82,6 +87,7 @@ class LocationLoggerService : Service() {
 
     override fun onDestroy() {
         client.removeLocationUpdates(callback)
+        FloatingButtons.hide()
         scope.cancel()
         SyncWorker.enqueue(this)   // flush the rest of the track
         super.onDestroy()
@@ -90,6 +96,7 @@ class LocationLoggerService : Service() {
     companion object {
         private const val CHANNEL = "shift_logging"
         private const val NOTIF_ID = 42
+        const val ACTION_SHOW_BUTTONS = "io.github.mdrifathahamed.spotorders.SHOW_BUTTONS"
         private val hhmm = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.of("Europe/Helsinki"))
 
         fun start(ctx: Context) = ctx.startForegroundService(Intent(ctx, LocationLoggerService::class.java))
@@ -116,6 +123,8 @@ class LocationLoggerService : Service() {
             fun action(a: String, code: Int) = PendingIntent.getBroadcast(
                 ctx, code, Intent(ctx, EventReceiver::class.java).setAction(a), flags)
             val open = PendingIntent.getActivity(ctx, 0, Intent(ctx, MainActivity::class.java), flags)
+            val showButtons = PendingIntent.getForegroundService(
+                ctx, 3, Intent(ctx, LocationLoggerService::class.java).setAction(ACTION_SHOW_BUTTONS), flags)
             return NotificationCompat.Builder(ctx, CHANNEL)
                 .setContentTitle("Spotorders · on shift")
                 .setContentText(text)
@@ -125,6 +134,7 @@ class LocationLoggerService : Service() {
                 .setOnlyAlertOnce(true)
                 .addAction(0, "Got order", action(EventReceiver.ACTION_OFFER, 1))
                 .addAction(0, "Free again", action(EventReceiver.ACTION_FREE, 2))
+                .addAction(0, "Show O/D", showButtons)
                 .build()
         }
     }

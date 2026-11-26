@@ -9,6 +9,7 @@ import io.github.mdrifathahamed.spotorders.data.EventType
 import io.github.mdrifathahamed.spotorders.data.Fix
 import io.github.mdrifathahamed.spotorders.data.ShiftEvent
 import io.github.mdrifathahamed.spotorders.location.LocationLoggerService
+import io.github.mdrifathahamed.spotorders.overlay.FloatingButtons
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -30,6 +31,7 @@ object EventRecorder {
             )
         )
         LocationLoggerService.refreshNotification(ctx, type, now)
+        FloatingButtons.onEvent(type)
         SyncWorker.enqueue(ctx)
     }
 

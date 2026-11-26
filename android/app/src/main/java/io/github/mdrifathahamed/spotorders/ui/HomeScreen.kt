@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -48,12 +49,15 @@ fun HomeScreen(
     onSaveConfig: (SyncConfig) -> Unit,
     onSyncNow: () -> Unit,
     onExport: () -> Unit,
+    overlayAllowed: Boolean = false,
+    onAllowOverlay: () -> Unit = {},
+    onShowButtons: () -> Unit = {},
 ) {
     val onShift = last != null && last.type != EventType.SHIFT_END
     var showSettings by remember { mutableStateOf(!status.configured) }
 
     Column(
-        Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+        Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text("Spotorders", style = MaterialTheme.typography.headlineMedium)
@@ -74,6 +78,17 @@ fun HomeScreen(
                 Text("Delivered · free again")
             }
             OutlinedButton({ onEvent(EventType.SHIFT_END) }, Modifier.fillMaxWidth()) { Text("End shift") }
+        }
+
+        HorizontalDivider()
+        if (overlayAllowed) {
+            Text("Floating buttons: O = got an order, D = delivered. They appear over every app during a shift. " +
+                 "Drag to move, drag onto the ✕ to hide.", style = MaterialTheme.typography.bodyMedium)
+            if (onShift) OutlinedButton(onShowButtons, Modifier.fillMaxWidth()) { Text("Show floating O / D buttons") }
+        } else {
+            Text("Allow \"Display over other apps\" to get the floating O / D buttons on top of the Wolt app.",
+                 style = MaterialTheme.typography.bodyMedium)
+            Button(onAllowOverlay, Modifier.fillMaxWidth()) { Text("Allow floating buttons") }
         }
 
         HorizontalDivider()
