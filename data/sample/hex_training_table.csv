@@ -5,12 +5,12 @@ h3_r8,time_bucket,day_type,weather_class,n_orders,n_shifts,median_wait_min,mean_
 881126d00dfffff,dinner,weekday,dry,7,7,16.66,1.446,K-Supermarket Arabia,60.2,24.967
 881126d009fffff,dinner,weekday,dry,7,6,0.67,1.779,Pizzeria Parmesan Kumpula,60.208,24.964
 881126d06dfffff,dinner,weekday,wet,7,2,13.825,1.301,Hesburger Helsinki Hakaniemi,60.181,24.952
-881126d00dfffff,dinner,weekday,wet,6,3,6.935,1.583,Subway Arabia,60.2,24.967
 881126d00dfffff,lunch,weekday,dry,6,3,0.0,1.664,Subway Arabia,60.2,24.967
+881126d00dfffff,lunch,weekday,cold_dry,6,1,4.155,,Ravintola China Flavor,60.2,24.967
 881126d061fffff,dinner,weekday,dry,6,3,14.855,0.84,McDonald's Helsinki Teollisuuskatu,60.187,24.961
-881126d067fffff,lunch,weekday,dry,5,4,43.0,2.21,Masala Hut,60.185,24.974
-881126d00dfffff,lunch,weekday,cold_dry,5,1,2.72,,Ravintola China Flavor,60.2,24.967
+881126d00dfffff,dinner,weekday,wet,6,3,6.935,1.583,Subway Arabia,60.2,24.967
 881126d061fffff,late,weekday,dry,5,3,18.87,1.622,Mojo Street Food,60.187,24.961
+881126d067fffff,lunch,weekday,dry,5,4,43.0,2.21,Masala Hut,60.185,24.974
 881126d06bfffff,dinner,weekday,dry,4,4,6.93,1.158,Wolt Market Vallila,60.195,24.958
 881126d06dfffff,late,weekday,wet,4,1,9.015,1.465,McDonald's Helsinki Hakaniemi,60.181,24.952
 881126d067fffff,late,weekday,dry,3,2,17.39,1.633,Taco Bell Redi,60.185,24.974
