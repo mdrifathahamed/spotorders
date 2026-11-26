@@ -48,13 +48,17 @@ def build_spots(df: pd.DataFrame) -> dict:
     places["name"] = places.name.fillna(places.kind.str.replace("_", " ").str.capitalize())
     P = open_by_bucket(places)
 
-    # my pickups per venue and bucket, at the venue coordinates
+    # Where each of my orders came to me. App-era orders: the GPS position where I actually stood when the
+    # order arrived (it is credited to the nearest food place within 100 m, so only restaurant locations are
+    # published). Screenshot-only orders: the pickup venue, the best guess available for them.
     venues = pd.read_csv(ROOT / "data/reference/venues.csv").dropna(subset=["lat"]).set_index("venue")
-    picks = (df.dropna(subset=["anchor_venue"]).groupby(["anchor_venue", "time_bucket"]).size()
-               .rename("n").reset_index())
-    picks = picks[picks.anchor_venue.isin(venues.index)]
-    picks["lat"] = venues.loc[picks.anchor_venue, "lat"].values
-    picks["lon"] = venues.loc[picks.anchor_venue, "lon"].values
+    gps = df.geocode_quality.eq("gps") & df.courier_lat.notna()
+    a = df[gps].assign(lat=df.courier_lat, lon=df.courier_lon, anchor_venue="", snap=100.0)
+    b = df[~gps & df.anchor_venue.isin(venues.index)].copy()
+    b["lat"] = venues.loc[b.anchor_venue, "lat"].values
+    b["lon"] = venues.loc[b.anchor_venue, "lon"].values
+    b["snap"] = 60.0
+    picks = pd.concat([a, b])[["anchor_venue", "time_bucket", "lat", "lon", "snap"]].assign(n=1)
     import h3
     picks["h3_r8"] = [h3.latlng_to_cell(a, b, 8) for a, b in zip(picks.lat, picks.lon)]
 
@@ -73,10 +77,13 @@ def build_spots(df: pd.DataFrame) -> dict:
             addr = [""] * len(names)
             for _, r in pb.sort_values("n").iterrows():
                 d = np.array([haversine_m(r.lat, r.lon, a, o) for a, o in zip(lat, lon)])
-                if len(d) and d.min() <= 60:
+                if len(d) and d.min() <= r.snap:
                     j = int(d.argmin())
                     score[j] += PICKUP_POINTS * r.n
-                    names[j], addr[j] = r.anchor_venue, str(venues.at[r.anchor_venue, "address"])  # my name for it
+                    if r.anchor_venue:                     # my own name for the venue, with its address
+                        names[j], addr[j] = r.anchor_venue, str(venues.at[r.anchor_venue, "address"])
+                elif not r.anchor_venue:
+                    continue                               # a GPS point far from any food place is not published
                 else:
                     ex_lat.append(r.lat); ex_lon.append(r.lon); ex_score.append(PICKUP_POINTS * r.n + 1)
                     ex_name.append(r.anchor_venue)
