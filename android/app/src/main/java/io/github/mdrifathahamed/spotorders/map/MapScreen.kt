@@ -57,14 +57,14 @@ private val HELSINKI = GeoPoint(60.192, 24.962)
 
 /** Colour scale for expected wait (minutes): green = short, red = long. */
 private fun waitColor(w: Double): Int = when {
-    w <= 10 -> 0x2E7D32
-    w <= 14 -> 0x8BC34A
-    w <= 18 -> 0xFFC107
-    w <= 24 -> 0xFB8C00
-    else -> 0xE53935
+    w <= 10 -> 0x2F855A   // Nordic palette (docs/logo studio): forest green
+    w <= 14 -> 0x689F38   // moss lime
+    w <= 18 -> 0xD97706   // warm amber
+    w <= 24 -> 0xE85D2A   // signal orange
+    else -> 0xC53030      // muted crimson
 }
 
-private val LEGEND = listOf("≤10" to 0x2E7D32, "≤14" to 0x8BC34A, "≤18" to 0xFFC107, "≤24" to 0xFB8C00, ">24" to 0xE53935)
+private val LEGEND = listOf("≤10" to 0x2F855A, "≤14" to 0x689F38, "≤18" to 0xD97706, "≤24" to 0xE85D2A, ">24" to 0xC53030)
 
 @SuppressLint("MissingPermission")
 private suspend fun currentLocation(ctx: Context): GeoPoint? {

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Spotorders logo">
+  <rect width="256" height="256" rx="52" fill="#18222F"/>
+  <polygon points="128.0,22.0 219.8,75.0 219.8,181.0 128.0,234.0 36.2,181.0 36.2,75.0" fill="none" stroke="#253346" stroke-width="2"/>
+  <path d="M128 32C83.8 32 48 67.8 48 112c0 55.2 70.1 112.4 76.2 117.3a6.2 6.2 0 0 0 7.6 0C137.9 224.4 208 167.2 208 112c0-44.2-35.8-80-80-80z" fill="#E85D2A"/>
+  <polygon points="128.0,72.0 162.6,92.0 162.6,132.0 128.0,152.0 93.4,132.0 93.4,92.0" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="128" cy="112" r="6.7" fill="#FFFFFF"/>
+</svg>

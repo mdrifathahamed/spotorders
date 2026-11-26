@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spotorders — Logo &amp; Spatial Grid Specification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            paper: '#F8F8F6',
+            surface: '#FFFFFF',
+            hairline: '#E2E2DE',
+            ink: '#1A1D20',
+            muted: '#646A73',
+            nordic: {
+              slate: '#18222F',
+              grid: '#253346',
+              orange: '#E85D2A',
+              blue: '#2B6CB0',
+              green: '#2F855A',
+              lime: '#689F38',
+              amber: '#D97706',
+              red: '#C53030'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Clean scrollbar for code output */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F8F8F6;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D1D1CC;
+    }
+  </style>
+</head>
+<body class="bg-paper text-ink font-sans antialiased selection:bg-nordic-orange selection:text-white min-h-screen flex flex-col">
+
+  <!-- Minimal Toast Notification (No alert() used) -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 pointer-events-none opacity-0 translate-y-1 transition-all duration-200">
+    <div class="bg-nordic-slate text-white px-4 py-2.5 rounded-lg border border-nordic-grid shadow-sm flex items-center gap-2.5 text-xs font-mono">
+      <span class="w-1.5 h-1.5 rounded-full bg-nordic-orange"></span>
+      <span id="toast-msg">Copied</span>
+    </div>
+  </div>
+
+  <!-- Minimal Functionalist Header -->
+  <header class="bg-surface border-b border-hairline">
+    <div class="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <!-- Small static brand mark -->
+        <div class="w-8 h-8 rounded-md bg-nordic-slate flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 64 64" class="w-5 h-5" aria-hidden="true">
+            <path d="M32 8C21.5 8 13 16.5 13 27c0 13.1 16.6 26.8 18 28a1.5 1.5 0 0 0 2 0c1.4-1.2 18-14.9 18-28 0-10.5-8.5-19-19-19z" fill="#E85D2A"/>
+            <polygon points="32,17 40.7,22 40.7,32 32,37 23.3,32 23.3,22" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round"/>
+            <circle cx="32" cy="27" r="2.2" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-2.5">
+            <h1 class="text-sm sm:text-base font-semibold tracking-tight text-ink">Spotorders</h1>
+            <span class="text-xs font-mono text-muted">Logo &amp; H3 Grid Specification</span>
+          </div>
+          <p class="text-[11px] text-muted hidden sm:block">
+            Independent Helsinki courier research · University of Helsinki MSc project
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 text-xs font-mono text-muted">
+        <span class="hidden md:inline">HELSINKI · 60.1699° N, 24.9384° E</span>
+        <a href="#specifications" class="text-ink hover:text-nordic-orange underline underline-offset-4 decoration-hairline hover:decoration-nordic-orange transition">
+          Color Tokens
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-10">
+
+    <!-- Primary Two-Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- Left Column (7 cols): Interactive H3 Canvas & State Controls -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Interactive Stage Card -->
+        <div class="bg-surface border border-hairline rounded-lg overflow-hidden">
+          <!-- Wayfinding Top Status Bar -->
+          <div class="px-4 py-3 border-b border-hairline flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+            <div class="flex items-center gap-2 text-ink">
+              <span class="w-2 h-2 rounded-full bg-nordic-orange"></span>
+              <span id="stage-state-text">App Icon (Default)</span>
+            </div>
+            <div class="flex items-center gap-3 text-muted">
+              <span>Cell: <strong id="cell-id-display" class="font-medium text-ink">8911262a3bfffff</strong></span>
+              <span>·</span>
+              <span>Est. wait: <strong id="cell-wait-display" class="font-medium text-ink">9.2 min</strong></span>
+            </div>
+          </div>
+
+          <!-- Interactive Canvas Stage -->
+          <div id="canvas-wrapper" class="relative w-full h-[380px] sm:h-[430px] bg-nordic-slate select-none cursor-crosshair overflow-hidden">
+            <canvas id="h3-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+
+            <!-- Android Adaptive Mask Cutout Frame (only visible in Adaptive state) -->
+            <div id="adaptive-mask-overlay" class="hidden absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+              <div id="adaptive-mask-frame" class="w-56 h-56 sm:w-60 sm:h-60 border border-white/40 shadow-[0_0_0_9999px_rgba(24,34,47,0.78)] transition-all duration-200 rounded-full flex items-end justify-center pb-3">
+                <span id="adaptive-mask-label" class="font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded bg-nordic-slate/90 text-slate-300 border border-white/15">
+                  Adaptive Mask · Circle (108dp)
+                </span>
+              </div>
+            </div>
+
+            <!-- Centered Crisp Flat SVG Emblem -->
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+              <div id="logo-stage-container" class="transition-transform duration-150">
+                <!-- SVG rendered by JS -->
+              </div>
+            </div>
+
+            <!-- Minimal HSL-style Bottom Legend Bar -->
+            <div class="absolute bottom-3 left-3 z-20 bg-nordic-slate/90 border border-nordic-grid rounded px-3 py-1.5 flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-300">
+              <span class="text-slate-400">Wait:</span>
+              <span class="flex items-center gap-1.5"><i class="w-2 h-2 rounded-full bg-nordic-green"></i>≤10m</span>
+              <span class="flex items-center gap-1.5"><i class="w-2 h-2 rounded-full bg-nordic-lime"></i>≤14m</span>
+              <span class="flex items-center gap-1.5"><i class="w-2 h-2 rounded-full bg-nordic-amber"></i>≤18m</span>
+              <span class="flex items-center gap-1.5"><i class="w-2 h-2 rounded-full bg-nordic-orange"></i>≤24m</span>
+              <span class="flex items-center gap-1.5"><i class="w-2 h-2 rounded-full bg-nordic-red"></i>&gt;24m</span>
+            </div>
+
+            <!-- Subtle Instruction Hint -->
+            <div class="absolute bottom-3 right-3 z-20 hidden sm:block text-[11px] font-mono text-slate-400 bg-nordic-slate/80 px-2.5 py-1 rounded border border-nordic-grid">
+              Hover or click grid cells
+            </div>
+          </div>
+        </div>
+
+        <!-- State & Adaptive Mask Selector Panel -->
+        <div class="bg-surface border border-hairline rounded-lg p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-wider text-muted">1. Icon States &amp; Android Masks</h2>
+            <span class="text-xs text-muted">Select variant to inspect</span>
+          </div>
+
+          <!-- 5 Clean State Tabs -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <button onclick="setLogoState('default')" data-state="default" class="state-btn px-3 py-2.5 rounded border text-left transition bg-paper border-nordic-orange text-ink">
+              <div class="text-xs font-medium">App Icon</div>
+              <div class="text-[11px] font-mono text-muted mt-0.5">Default</div>
+            </button>
+
+            <button onclick="setLogoState('order_o')" data-state="order_o" class="state-btn px-3 py-2.5 rounded border border-hairline bg-surface hover:bg-paper text-ink text-left transition">
+              <div class="text-xs font-medium">Order (O)</div>
+              <div class="text-[11px] font-mono text-muted mt-0.5">Active tap</div>
+            </button>
+
+            <button onclick="setLogoState('delivered_d')" data-state="delivered_d" class="state-btn px-3 py-2.5 rounded border border-hairline bg-surface hover:bg-paper text-ink text-left transition">
+              <div class="text-xs font-medium">Delivered (D)</div>
+              <div class="text-[11px] font-mono text-muted mt-0.5">Handover</div>
+            </button>
+
+            <button onclick="setLogoState('monochrome')" data-state="monochrome" class="state-btn px-3 py-2.5 rounded border border-hairline bg-surface hover:bg-paper text-ink text-left transition">
+              <div class="text-xs font-medium">Status Bar</div>
+              <div class="text-[11px] font-mono text-muted mt-0.5">Monochrome</div>
+            </button>
+
+            <button onclick="setLogoState('adaptive')" data-state="adaptive" class="state-btn col-span-2 sm:col-span-1 px-3 py-2.5 rounded border border-hairline bg-surface hover:bg-paper text-ink text-left transition">
+              <div class="text-xs font-medium">Adaptive</div>
+              <div class="text-[11px] font-mono text-muted mt-0.5">Launcher</div>
+            </button>
+          </div>
+
+          <!-- Adaptive Launcher Mask Shapes (Visible only in Adaptive state) -->
+          <div id="adaptive-subbar" class="hidden pt-3 border-t border-hairline flex flex-wrap items-center justify-between gap-3">
+            <span class="text-xs text-muted">Launcher mask geometry:</span>
+            <div class="flex items-center gap-2">
+              <button onclick="setAdaptiveShape('circle')" data-shape="circle" class="shape-btn px-3 py-1 rounded text-xs font-mono bg-paper border border-ink text-ink font-medium">
+                Circle
+              </button>
+              <button onclick="setAdaptiveShape('squircle')" data-shape="squircle" class="shape-btn px-3 py-1 rounded text-xs font-mono bg-surface border border-hairline text-muted hover:text-ink">
+                Squircle
+              </button>
+              <button onclick="setAdaptiveShape('teardrop')" data-shape="teardrop" class="shape-btn px-3 py-1 rounded text-xs font-mono bg-surface border border-hairline text-muted hover:text-ink">
+                Teardrop
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column (5 cols): Geometry Adjustments & Asset Exports -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- Geometry & Backdrop Controls -->
+        <div class="bg-surface border border-hairline rounded-lg p-5 space-y-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-wider text-muted">2. Geometry &amp; Grid Parameters</h2>
+            <button onclick="resetParameters()" class="text-xs text-muted hover:text-ink underline underline-offset-4 decoration-hairline">
+              Reset
+            </button>
+          </div>
+
+          <!-- Surface Backdrop Selector -->
+          <div class="flex items-center justify-between py-2.5 px-3 rounded bg-paper border border-hairline">
+            <div>
+              <div class="text-xs font-medium text-ink">Canvas Surface</div>
+              <div class="text-[11px] font-mono text-muted">Nordic Slate vs. Paper Light</div>
+            </div>
+            <div class="flex rounded border border-hairline bg-surface p-0.5">
+              <button onclick="setSurfaceTheme('dark')" id="btn-theme-dark" class="px-2.5 py-1 rounded-sm font-mono text-xs bg-nordic-slate text-white transition">
+                Slate
+              </button>
+              <button onclick="setSurfaceTheme('light')" id="btn-theme-light" class="px-2.5 py-1 rounded-sm font-mono text-xs text-muted hover:text-ink transition">
+                Light
+              </button>
+            </div>
+          </div>
+
+          <!-- Sliders -->
+          <div class="space-y-4">
+            <!-- Hex Grid Scale -->
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <label for="slider-density" class="text-ink font-medium">Background H3 Cell Scale</label>
+                <span id="val-density" class="font-mono text-muted">36 px</span>
+              </div>
+              <input id="slider-density" type="range" min="24" max="52" value="36" oninput="updateParams()" class="w-full accent-[#E85D2A] h-1 bg-hairline rounded cursor-pointer" />
+            </div>
+
+            <!-- Inner H3 Hexagon Stroke Weight -->
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <label for="slider-stroke" class="text-ink font-medium">Inner H3 Cell Stroke</label>
+                <span id="val-stroke" class="font-mono text-muted">7.0 px</span>
+              </div>
+              <input id="slider-stroke" type="range" min="4" max="11" step="0.5" value="7" oninput="updateParams()" class="w-full accent-[#E85D2A] h-1 bg-hairline rounded cursor-pointer" />
+            </div>
+
+            <!-- Show Faint H3 Frame in Export -->
+            <div class="flex items-center justify-between pt-1">
+              <label for="toggle-bg-hex" class="text-xs font-medium text-ink cursor-pointer">Include outer H3 cell frame in export</label>
+              <input id="toggle-bg-hex" type="checkbox" checked onchange="refreshStudioUI()" class="w-4 h-4 accent-[#E85D2A] rounded border-hairline cursor-pointer" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Clean Asset Export Panel -->
+        <div class="bg-surface border border-hairline rounded-lg p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-wider text-muted">3. Export Production Assets</h2>
+            <span class="font-mono text-[11px] text-muted">docs/logo.svg</span>
+          </div>
+
+          <!-- Export Buttons Grid -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="downloadSVG()" class="px-3.5 py-2.5 rounded bg-nordic-orange hover:bg-[#d65120] text-white font-medium text-xs transition flex items-center justify-center gap-2">
+              <span>Download SVG</span>
+            </button>
+
+            <button onclick="downloadPNG(512)" class="px-3.5 py-2.5 rounded bg-nordic-slate hover:bg-[#223042] text-white font-medium text-xs transition flex items-center justify-center gap-2">
+              <span>PNG 512×512</span>
+            </button>
+
+            <button onclick="downloadPNG(192)" class="px-3.5 py-2 rounded bg-paper hover:bg-hairline/50 border border-hairline text-ink font-mono text-xs transition flex items-center justify-center">
+              <span>PNG 192×192</span>
+            </button>
+
+            <button onclick="downloadAndroidVectorXML()" class="px-3.5 py-2 rounded bg-paper hover:bg-hairline/50 border border-hairline text-ink font-mono text-xs transition flex items-center justify-center">
+              <span>VectorDrawable XML</span>
+            </button>
+          </div>
+
+          <!-- Standalone SVG Markup Inspector -->
+          <div class="space-y-2 pt-2 border-t border-hairline">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[11px] text-muted">Standalone SVG Source</span>
+              <button onclick="copySVGCode()" class="px-2.5 py-1 rounded bg-paper hover:bg-hairline/60 border border-hairline font-mono text-[11px] text-ink transition">
+                Copy SVG
+              </button>
+            </div>
+            <textarea id="svg-code-output" readonly rows="6" class="w-full rounded bg-paper border border-hairline p-3 font-mono text-[11px] text-ink leading-relaxed focus:outline-none focus:border-nordic-orange resize-none"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Section: Color System & GitHub README Preview -->
+    <section id="specifications" class="bg-surface border border-hairline rounded-lg p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-hairline pb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-ink">4. Color Specification &amp; README Header Preview</h3>
+          <p class="text-xs text-muted mt-0.5">Flat functionalist palette calibrated for outdoor daylight and night shifts.</p>
+        </div>
+        <span class="font-mono text-[11px] text-muted">Click any swatch to copy hex</span>
+      </div>
+
+      <!-- Flat Color Swatches -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <button onclick="copyHex('#E85D2A')" class="p-3 rounded bg-paper border border-hairline hover:border-ink text-left transition">
+          <div class="w-full h-8 rounded-sm bg-[#E85D2A] mb-2"></div>
+          <div class="text-xs font-medium text-ink">Signal Orange</div>
+          <div class="font-mono text-[11px] text-muted">#E85D2A</div>
+        </button>
+
+        <button onclick="copyHex('#18222F')" class="p-3 rounded bg-paper border border-hairline hover:border-ink text-left transition">
+          <div class="w-full h-8 rounded-sm bg-[#18222F] mb-2"></div>
+          <div class="text-xs font-medium text-ink">Nordic Slate</div>
+          <div class="font-mono text-[11px] text-muted">#18222F</div>
+        </button>
+
+        <button onclick="copyHex('#2F855A')" class="p-3 rounded bg-paper border border-hairline hover:border-ink text-left transition">
+          <div class="w-full h-8 rounded-sm bg-[#2F855A] mb-2"></div>
+          <div class="text-xs font-medium text-ink">Wait ≤10 min</div>
+          <div class="font-mono text-[11px] text-muted">#2F855A</div>
+        </button>
+
+        <button onclick="copyHex('#689F38')" class="p-3 rounded bg-paper border border-hairline hover:border-ink text-left transition">
+          <div class="w-full h-8 rounded-sm bg-[#689F38] mb-2"></div>
+          <div class="text-xs font-medium text-ink">Wait ≤14 min</div>
+          <div class="font-mono text-[11px] text-muted">#689F38</div>
+        </button>
+
+        <button onclick="copyHex('#D97706')" class="p-3 rounded bg-paper border border-hairline hover:border-ink text-left transition">
+          <div class="w-full h-8 rounded-sm bg-[#D97706] mb-2"></div>
+          <div class="text-xs font-medium text-ink">Wait ≤18 min</div>
+          <div class="font-mono text-[11px] text-muted">#D97706</div>
+        </button>
+
+        <button onclick="copyHex('#2B6CB0')" class="p-3 rounded bg-paper border border-hairline hover:border-ink text-left transition">
+          <div class="w-full h-8 rounded-sm bg-[#2B6CB0] mb-2"></div>
+          <div class="text-xs font-medium text-ink">Delivered (D)</div>
+          <div class="font-mono text-[11px] text-muted">#2B6CB0</div>
+        </button>
+      </div>
+
+      <!-- Quiet Academic / Functionalist README Header Preview -->
+      <div class="rounded-lg border border-hairline bg-paper p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div class="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl bg-nordic-slate flex items-center justify-center">
+            <svg viewBox="0 0 120 120" class="w-12 h-12 sm:w-14 sm:h-14" aria-hidden="true">
+              <polygon points="60,14 98,36 98,80 60,102 22,80 22,36" fill="none" stroke="#253346" stroke-width="2"/>
+              <path d="M60 18C40.7 18 25 33.7 25 53c0 24.1 30.6 49.2 33.3 51.4a2.7 2.7 0 0 0 3.4 0C64.4 102.2 95 77.1 95 53 95 33.7 79.3 18 60 18z" fill="#E85D2A"/>
+              <polygon points="60,35 75.6,44 75.6,62 60,71 44.4,62 44.4,44" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
+              <circle cx="60" cy="53" r="3.5" fill="#FFFFFF"/>
+            </svg>
+          </div>
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2 text-xs font-mono text-muted">
+              <span>mdrifathahamed/spotorders</span>
+              <span>·</span>
+              <span>App v8</span>
+              <span>·</span>
+              <span>189 historical orders</span>
+              <span>·</span>
+              <span>€0 cost</span>
+            </div>
+            <h4 class="text-xl sm:text-2xl font-semibold tracking-tight text-ink">
+              Spotorders
+            </h4>
+            <p class="text-sm text-muted max-w-2xl leading-relaxed">
+              Where should a bike courier wait so the next delivery order comes fastest? An optimal-foraging field study and Android logger built in Helsinki using H3 hexagons, OpenStreetMap, and Open-Meteo.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // SPOTORDERS NORDIC LOGO STUDIO — STATE & INTERACTION LOGIC
+    // =========================================================================
+    const state = {
+      logoMode: 'default',       // 'default' | 'order_o' | 'delivered_d' | 'monochrome' | 'adaptive'
+      adaptiveShape: 'circle',   // 'circle' | 'squircle' | 'teardrop'
+      surfaceTheme: 'dark',      // 'dark' (#18222F) | 'light' (#F2F2EF)
+      hexRadius: 36,             // 24 - 52 px
+      innerStroke: 7.0,          // 4 - 11 px
+      pointer: { x: -999, y: -999, active: false },
+      selectedCell: null,
+      hexCells: []
+    };
+
+    const WAIT_TIERS = [
+      { max: 10, color: '#2F855A' }, // Nordic Forest Green
+      { max: 14, color: '#689F38' }, // Moss Lime
+      { max: 18, color: '#D97706' }, // Warm Amber
+      { max: 24, color: '#E85D2A' }, // Signal Orange
+      { max: 99, color: '#C53030' }  // Muted Crimson
+    ];
+
+    function getWaitColor(waitMin) {
+      for (const t of WAIT_TIERS) {
+        if (waitMin <= t.max) return t.color;
+      }
+      return WAIT_TIERS[WAIT_TIERS.length - 1].color;
+    }
+
+    // Minimal Toast Helper (strictly avoids alert())
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-1');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-1');
+      }, 2200);
+    }
+
+    // =========================================================================
+    // FLAT INTERACTIVE H3 HEXAGON GRID (NO GLOW OR PARTICLES)
+    // =========================================================================
+    const canvas = document.getElementById('h3-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const wrapper = document.getElementById('canvas-wrapper');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = wrapper.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildHexGrid(rect.width, rect.height);
+      drawCanvas();
+    }
+
+    function buildHexGrid(width, height) {
+      const r = state.hexRadius;
+      const hexWidth = Math.sqrt(3) * r;
+      const vertDist = 1.5 * r;
+      const cols = Math.ceil(width / hexWidth) + 2;
+      const rows = Math.ceil(height / vertDist) + 2;
+
+      const cells = [];
+      const cxCenter = width / 2;
+      const cyCenter = height / 2;
+
+      for (let row = -1; row < rows; row++) {
+        for (let col = -1; col < cols; col++) {
+          const xOffset = (row % 2 !== 0) ? hexWidth / 2 : 0;
+          const cx = col * hexWidth + xOffset;
+          const cy = row * vertDist;
+
+          const distFromCenter = Math.hypot(cx - cxCenter, cy - cyCenter);
+          const wave = Math.sin(col * 0.7) * Math.cos(row * 0.7) * 6;
+          const waitMin = Math.max(6.0, Math.min(29.5, 8.2 + (distFromCenter / 28) + wave));
+          const h3Index = `891126${((Math.abs(row * 31 + col * 17)) % 256).toString(16).padStart(2, '0')}fffff`;
+
+          cells.push({
+            cx,
+            cy,
+            r,
+            waitMin: Number(waitMin.toFixed(1)),
+            h3Index
+          });
+        }
+      }
+      state.hexCells = cells;
+    }
+
+    function traceHexPath(cx, cy, r) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 180) * (60 * i - 30);
+        const px = cx + r * Math.cos(angle);
+        const py = cy + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    }
+
+    function hexToRgba(hex, alpha) {
+      const clean = hex.replace('#', '');
+      const num = parseInt(clean, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function drawCanvas() {
+      const wrapper = document.getElementById('canvas-wrapper');
+      const width = wrapper.clientWidth;
+      const height = wrapper.clientHeight;
+      const isDark = state.surfaceTheme === 'dark';
+
+      // Flat Nordic Slate (#18222F) or Light Map Paper (#F0F0EC)
+      ctx.fillStyle = isDark ? '#18222F' : '#F0F0EC';
+      ctx.fillRect(0, 0, width, height);
+
+      let hoveredCell = null;
+      let minDist = Infinity;
+
+      for (const cell of state.hexCells) {
+        if (state.pointer.active) {
+          const d = Math.hypot(cell.cx - state.pointer.x, cell.cy - state.pointer.y);
+          if (d < cell.r * 0.95 && d < minDist) {
+            minDist = d;
+            hoveredCell = cell;
+          }
+        }
+
+        traceHexPath(cell.cx, cell.cy, cell.r - 1);
+
+        // Clean hairline hexagon grid
+        ctx.strokeStyle = isDark ? '#253346' : '#DCDCD6';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Subtle flat fill for selected or hovered cell (unless monochrome)
+        const isSelected = state.selectedCell && state.selectedCell.h3Index === cell.h3Index;
+        const isHovered = hoveredCell && hoveredCell.h3Index === cell.h3Index;
+
+        if ((isSelected || isHovered) && state.logoMode !== 'monochrome') {
+          const tierColor = getWaitColor(cell.waitMin);
+          ctx.fillStyle = hexToRgba(tierColor, isSelected ? 0.28 : 0.18);
+          ctx.fill();
+          ctx.strokeStyle = tierColor;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+
+      const activeCell = hoveredCell || state.selectedCell;
+      if (activeCell) {
+        document.getElementById('cell-id-display').textContent = activeCell.h3Index;
+        document.getElementById('cell-wait-display').textContent = `${activeCell.waitMin.toFixed(1)} min`;
+      }
+    }
+
+    // Canvas Pointer & Touch Interactions
+    const canvasWrapper = document.getElementById('canvas-wrapper');
+
+    canvasWrapper.addEventListener('mousemove', (e) => {
+      const rect = canvasWrapper.getBoundingClientRect();
+      state.pointer.x = e.clientX - rect.left;
+      state.pointer.y = e.clientY - rect.top;
+      state.pointer.active = true;
+      drawCanvas();
+    });
+
+    canvasWrapper.addEventListener('mouseleave', () => {
+      state.pointer.active = false;
+      drawCanvas();
+    });
+
+    canvasWrapper.addEventListener('click', (e) => {
+      const rect = canvasWrapper.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      let closest = null;
+      let minDist = Infinity;
+      for (const cell of state.hexCells) {
+        const d = Math.hypot(cell.cx - clickX, cell.cy - clickY);
+        if (d < cell.r && d < minDist) {
+          minDist = d;
+          closest = cell;
+        }
+      }
+      state.selectedCell = closest;
+      drawCanvas();
+    });
+
+    canvasWrapper.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        const rect = canvasWrapper.getBoundingClientRect();
+        const tx = e.touches[0].clientX - rect.left;
+        const ty = e.touches[0].clientY - rect.top;
+        state.pointer.x = tx;
+        state.pointer.y = ty;
+        state.pointer.active = true;
+        drawCanvas();
+      }
+    }, { passive: true });
+
+    // =========================================================================
+    // CLEAN FLAT VECTOR LOGO GENERATOR (NO DROP-SHADOWS OR NEON FILTERS)
+    // =========================================================================
+    function generateLogoSVG({ standalone = false } = {}) {
+      const isMono = state.logoMode === 'monochrome';
+      const isOrderO = state.logoMode === 'order_o';
+      const isDeliveredD = state.logoMode === 'delivered_d';
+      const isDark = state.surfaceTheme === 'dark';
+      const includeOuterHex = document.getElementById('toggle-bg-hex')?.checked ?? true;
+
+      const pinColor = isMono
+        ? (isDark ? '#FFFFFF' : '#18222F')
+        : isDeliveredD
+          ? '#2B6CB0'
+          : '#E85D2A';
+
+      const innerColor = isMono
+        ? (isDark ? '#18222F' : '#FFFFFF')
+        : '#FFFFFF';
+
+      const strokeW = state.innerStroke;
+
+      // Optional subtle outer H3 frame for standalone SVG export
+      const outerHexMarkup = (standalone && includeOuterHex && !isMono)
+        ? `\n  <!-- Subtle H3 Reference Cell -->\n  <polygon points="128,22 219.8,75 219.8,181 128,234 36.2,181 36.2,75" fill="none" stroke="${isDark ? '#253346' : '#D4D4CE'}" stroke-width="2" />`
+        : '';
+
+      // Optional flat status badge for O (Order) / D (Delivered)
+      let badgeMarkup = '';
+      if (isOrderO) {
+        badgeMarkup = `
+  <!-- Order (O) Indicator -->
+  <circle cx="182" cy="64" r="20" fill="#2F855A" stroke="${isDark ? '#18222F' : '#FFFFFF'}" stroke-width="4" />
+  <text x="182" y="70" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Helvetica, Arial, sans-serif" font-weight="600" font-size="17">O</text>`;
+      } else if (isDeliveredD) {
+        badgeMarkup = `
+  <!-- Delivered (D) Indicator -->
+  <circle cx="182" cy="64" r="20" fill="#2F855A" stroke="${isDark ? '#18222F' : '#FFFFFF'}" stroke-width="4" />
+  <text x="182" y="70" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Helvetica, Arial, sans-serif" font-weight="600" font-size="17">D</text>`;
+      }
+
+      const sizeAttr = standalone ? '256' : '196';
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="${sizeAttr}" height="${sizeAttr}" role="img" aria-label="Spotorders Logo">${outerHexMarkup}
+  <!-- Map Pin -->
+  <path d="M128 32C83.8 32 48 67.8 48 112c0 55.2 70.1 112.4 76.2 117.3a6.2 6.2 0 0 0 7.6 0C137.9 224.4 208 167.2 208 112c0-44.2-35.8-80-80-80z" fill="${pinColor}" />
+  <!-- H3 Spatial Hexagon -->
+  <polygon points="128,72 162.6,92 162.6,132 128,152 93.4,132 93.4,92" fill="none" stroke="${innerColor}" stroke-width="${strokeW}" stroke-linejoin="round" />
+  <!-- Center Point -->
+  <circle cx="128" cy="112" r="${(strokeW * 0.95).toFixed(1)}" fill="${innerColor}" />${badgeMarkup}
+</svg>`;
+    }
+
+    function refreshStudioUI() {
+      document.getElementById('logo-stage-container').innerHTML = generateLogoSVG({ standalone: false });
+      document.getElementById('svg-code-output').value = generateLogoSVG({ standalone: true });
+    }
+
+    // =========================================================================
+    // UI STATE HANDLERS
+    // =========================================================================
+    function setLogoState(mode) {
+      state.logoMode = mode;
+
+      document.querySelectorAll('.state-btn').forEach(btn => {
+        const active = btn.dataset.state === mode;
+        btn.className = active
+          ? 'state-btn px-3 py-2.5 rounded border text-left transition bg-paper border-nordic-orange text-ink'
+          : 'state-btn px-3 py-2.5 rounded border border-hairline bg-surface hover:bg-paper text-ink text-left transition';
+      });
+
+      const adaptiveOverlay = document.getElementById('adaptive-mask-overlay');
+      const adaptiveSubbar = document.getElementById('adaptive-subbar');
+      const stageText = document.getElementById('stage-state-text');
+
+      if (mode === 'adaptive') {
+        adaptiveOverlay.classList.remove('hidden');
+        adaptiveSubbar.classList.remove('hidden');
+        stageText.textContent = `Adaptive Launcher Icon (${state.adaptiveShape})`;
+      } else {
+        adaptiveOverlay.classList.add('hidden');
+        adaptiveSubbar.classList.add('hidden');
+        const names = {
+          default: 'App Icon (Default)',
+          order_o: 'Floating Button · Order (O)',
+          delivered_d: 'Floating Button · Delivered (D)',
+          monochrome: 'Status Bar Icon (Monochrome)'
+        };
+        stageText.textContent = names[mode] || 'App Icon';
+      }
+
+      drawCanvas();
+      refreshStudioUI();
+    }
+
+    function setAdaptiveShape(shape) {
+      state.adaptiveShape = shape;
+      const frame = document.getElementById('adaptive-mask-frame');
+      const label = document.getElementById('adaptive-mask-label');
+
+      document.querySelectorAll('.shape-btn').forEach(btn => {
+        const active = btn.dataset.shape === shape;
+        btn.className = active
+          ? 'shape-btn px-3 py-1 rounded text-xs font-mono bg-paper border border-ink text-ink font-medium'
+          : 'shape-btn px-3 py-1 rounded text-xs font-mono bg-surface border border-hairline text-muted hover:text-ink';
+      });
+
+      frame.style.borderRadius = shape === 'circle'
+        ? '9999px'
+        : shape === 'squircle'
+          ? '52px'
+          : '9999px 9999px 16px 9999px';
+
+      const capShape = shape.charAt(0).toUpperCase() + shape.slice(1);
+      label.textContent = `Adaptive Mask · ${capShape} (108dp)`;
+      document.getElementById('stage-state-text').textContent = `Adaptive Launcher Icon (${shape})`;
+    }
+
+    function setSurfaceTheme(theme) {
+      state.surfaceTheme = theme;
+      const btnDark = document.getElementById('btn-theme-dark');
+      const btnLight = document.getElementById('btn-theme-light');
+
+      if (theme === 'dark') {
+        btnDark.className = 'px-2.5 py-1 rounded-sm font-mono text-xs bg-nordic-slate text-white transition';
+        btnLight.className = 'px-2.5 py-1 rounded-sm font-mono text-xs text-muted hover:text-ink transition';
+      } else {
+        btnLight.className = 'px-2.5 py-1 rounded-sm font-mono text-xs bg-paper border border-hairline text-ink font-medium transition';
+        btnDark.className = 'px-2.5 py-1 rounded-sm font-mono text-xs text-muted hover:text-ink transition';
+      }
+
+      drawCanvas();
+      refreshStudioUI();
+    }
+
+    function updateParams() {
+      const density = Number(document.getElementById('slider-density').value);
+      const stroke = Number(document.getElementById('slider-stroke').value);
+
+      state.hexRadius = density;
+      state.innerStroke = stroke;
+
+      document.getElementById('val-density').textContent = `${density} px`;
+      document.getElementById('val-stroke').textContent = `${stroke.toFixed(1)} px`;
+
+      const wrapper = document.getElementById('canvas-wrapper');
+      buildHexGrid(wrapper.clientWidth, wrapper.clientHeight);
+      drawCanvas();
+      refreshStudioUI();
+    }
+
+    function resetParameters() {
+      document.getElementById('slider-density').value = 36;
+      document.getElementById('slider-stroke').value = 7;
+      document.getElementById('toggle-bg-hex').checked = true;
+      setSurfaceTheme('dark');
+      setLogoState('default');
+      updateParams();
+      showToast('Parameters reset');
+    }
+
+    // =========================================================================
+    // CLIPBOARD & FILE EXPORTS
+    // =========================================================================
+    function copySVGCode() {
+      const textarea = document.getElementById('svg-code-output');
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+        showToast('Copied SVG markup');
+      } catch (err) {
+        showToast('Copy failed');
+      }
+    }
+
+    function copyHex(hex) {
+      const input = document.createElement('input');
+      input.value = hex;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      showToast(`Copied ${hex}`);
+    }
+
+    function downloadSVG() {
+      const svgContent = generateLogoSVG({ standalone: true });
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `spotorders-logo-${state.logoMode}.svg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast(`Saved spotorders-logo-${state.logoMode}.svg`);
+    }
+
+    function downloadPNG(size) {
+      const svgContent = generateLogoSVG({ standalone: true });
+      const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+
+      img.onload = function () {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = size;
+        offCanvas.height = size;
+        const offCtx = offCanvas.getContext('2d');
+
+        if (state.logoMode !== 'monochrome') {
+          offCtx.fillStyle = state.surfaceTheme === 'dark' ? '#18222F' : '#FFFFFF';
+          offCtx.fillRect(0, 0, size, size);
+        }
+
+        offCtx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+
+        offCanvas.toBlob((pngBlob) => {
+          const pngUrl = URL.createObjectURL(pngBlob);
+          const link = document.createElement('a');
+          link.href = pngUrl;
+          link.download = `spotorders-${size}x${size}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(pngUrl);
+          showToast(`Saved spotorders-${size}x${size}.png`);
+        }, 'image/png');
+      };
+
+      img.src = url;
+    }
+
+    function downloadAndroidVectorXML() {
+      const strokeWidth = state.innerStroke.toFixed(1);
+      const radius = (state.innerStroke * 0.95).toFixed(1);
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <!-- Map Pin -->
+    <path
+        android:fillColor="#E85D2A"
+        android:pathData="M128,32C83.8,32 48,67.8 48,112c0,55.2 70.1,112.4 76.2,117.3c2.2,1.8 5.4,1.8 7.6,0C137.9,224.4 208,167.2 208,112C208,67.8 172.2,32 128,32z" />
+    <!-- H3 Spatial Hexagon -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="${strokeWidth}"
+        android:strokeLineJoin="round"
+        android:pathData="M128,72 L162.6,92 L162.6,132 L128,152 L93.4,132 L93.4,92 Z" />
+    <!-- Center Point -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M128,${(112 - Number(radius)).toFixed(1)} A${radius},${radius} 0 1,0 128,${(112 + Number(radius)).toFixed(1)} A${radius},${radius} 0 1,0 128,${(112 - Number(radius)).toFixed(1)} Z" />
+</vector>`;
+
+      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'ic_spotorders_foreground.xml';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Saved ic_spotorders_foreground.xml');
+    }
+
+    // Initialize on load
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      refreshStudioUI();
+    });
+  </script>
+</body>
+</html>

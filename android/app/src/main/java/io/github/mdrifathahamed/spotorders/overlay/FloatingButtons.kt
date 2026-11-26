@@ -55,10 +55,10 @@ object FloatingButtons {
     private var lastType: EventType? = null
     private var lastTap = mutableMapOf<EventType, Long>()
 
-    private const val ORANGE = 0xFFFF7A00.toInt()
-    private const val BLUE = 0xFF1E88E5.toInt()
-    private const val DIM = 0x99555555.toInt()
-    private const val GREEN = 0xFF2E7D32.toInt()
+    private const val ORANGE = 0xFFE85D2A.toInt()
+    private const val BLUE = 0xFF2B6CB0.toInt()
+    private const val DIM = 0x9918222F.toInt()
+    private const val GREEN = 0xFF2F855A.toInt()
     private const val DEBOUNCE_MS = 4_000L   // ignore accidental double taps of the same button
 
     fun canDraw(ctx: Context) = Settings.canDrawOverlays(ctx)
