@@ -2,6 +2,8 @@ package io.github.mdrifathahamed.spotorders.map
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -146,10 +148,18 @@ fun MapScreen(owner: String, publicRepo: String) {
                          else "No good spot within 3 km for this time yet.",
                          style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    val where = rec.cell.topVenue ?: "this area"
-                    Text(if (rec.stay) "Stay here: nothing within 3 km is clearly better"
-                         else "Best spot now: near $where", style = MaterialTheme.typography.titleMedium)
-                    val dist = if (rec.stay) "" else rec.distanceM?.let { d ->
+                    val spot = rec.cell.spot[rec.bucket]
+                    val where = spot?.name ?: rec.cell.topVenue ?: "this area"
+                    Text(if (rec.stay) "Stay in this area: nothing within 3 km is clearly better"
+                         else "Go to: $where", style = MaterialTheme.typography.titleMedium)
+                    if (spot != null) {
+                        Text((if (rec.stay) "Best place to stand: ${spot.name}" else "Stand by ${spot.name}") +
+                             (if (spot.address.isNotBlank()) ", ${spot.address}" else "") +
+                             " · ~${spot.openNear} food places open within 150 m" +
+                             (if (spot.myNear > 0) " · ${spot.myNear} of my pickups there at this time" else ""),
+                             style = MaterialTheme.typography.bodyMedium)
+                    }
+                    val dist = rec.distanceM?.takeIf { it > 60 }?.let { d ->
                         " · ${if (d < 1000) "${d.roundToInt()} m" else "%.1f km".format(d / 1000)}" +
                             " away (${rec.rideMin!!.roundToInt().coerceAtLeast(1)} min ride)"
                     } ?: ""
@@ -172,9 +182,15 @@ fun MapScreen(owner: String, publicRepo: String) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("${appMap?.totalOrders ?: 0} orders · $source", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.weight(1f))
-                    if (rec != null) TextButton({
-                        mapView.controller.animateTo(GeoPoint(rec.cell.lat, rec.cell.lon), 15.0, 600L)
-                    }) { Text("Show") }
+                    if (rec != null) {
+                        val (tl, to) = target(rec.cell, rec.bucket)
+                        TextButton({ mapView.controller.animateTo(GeoPoint(tl, to), 16.5, 600L) }) { Text("Show") }
+                        TextButton({
+                            val label = Uri.encode(rec.cell.spot[rec.bucket]?.name ?: "Waiting spot")
+                            val i = Intent(Intent.ACTION_VIEW, Uri.parse("geo:$tl,$to?q=$tl,$to($label)"))
+                            runCatching { ctx.startActivity(i) }
+                        }) { Text("Navigate") }
+                    }
                     TextButton({ reload(true) }) { Text("Refresh") }
                 }
             }
@@ -220,7 +236,7 @@ private fun drawHexes(mv: MapView, map: AppMap?, bucket: String, rec: Recommenda
             outlinePaint.color = (0xCC shl 24) or rgb
             outlinePaint.strokeWidth = if (rec?.cell?.h3 == c.h3) 6f else 2f
             if (rec?.cell?.h3 == c.h3) outlinePaint.color = Color.BLACK
-            title = c.topVenue ?: "Hexagon"
+            title = c.spot[bucket]?.let { "Stand by ${it.name}" } ?: c.topVenue ?: "Hexagon"
             val openLine = c.open[bucket]?.let {
                 "Open at this time: ~${it.roundToInt()} of ${c.foodPlaces} food places (${c.hoursKnown} with known hours)"
             } ?: "Food places: ${c.foodPlaces}"
@@ -236,9 +252,10 @@ private fun drawHexes(mv: MapView, map: AppMap?, bucket: String, rec: Recommenda
     mv.overlays.add(myLocation)
     rec?.let {
         mv.overlays.add(Marker(mv).apply {
-            position = GeoPoint(it.cell.lat, it.cell.lon)
+            val (tl, to) = target(it.cell, it.bucket)
+            position = GeoPoint(tl, to)
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = if (it.stay) "Stay here" else "Best spot now"
+            title = it.cell.spot[it.bucket]?.name ?: if (it.stay) "Stay here" else "Best spot now"
             snippet = "~${it.waitMin.roundToInt()} min expected wait"
         })
     }

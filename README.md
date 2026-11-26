@@ -137,7 +137,7 @@ newer (`minSdk 26`). GitHub Actions builds and signs every release, so the app n
 | **Shift tab** | Starts and ends the foreground logging service; fallback O/D buttons; upload status; GitHub settings with the token encrypted by the Android Keystore; CSV export. |
 | **Floating O / D buttons** | Chat-head buttons drawn over every app, including the Wolt Partner app. The button needed next is bright (**O** signal orange, **D** delivery blue); while delivering a **+** button appears for each extra order, and **D** counts down the drop-offs, both fade when idle, a second tap within 4 s is ignored (winter gloves), and they snap to the screen edge. Drag onto the ✕ to hide them. |
 | **Notification** | **Got order**, **Free again** and **Show O/D** actions, so the app never has to be opened mid-shift. |
-| **Map tab** | H3 hexagons coloured by expected wait, from forest green (≤10 min) to crimson (>24 min). Solid cells come from my own orders and faint cells from the restaurant prior. Time-of-day chips, and a **Best spot now** card that picks the shortest expected wait within 3 km, counting the ride there at half weight. |
+| **Map tab** | H3 hexagons coloured by expected wait, from forest green (≤10 min) to crimson (>24 min). Solid cells come from my own orders and faint cells from the restaurant prior. Time-of-day chips, and a card that names a concrete place to stand (the busiest food place at that time, centred on the open places within 150 m), with a **Navigate** button. |
 | **History screenshot** | After a shift, **Add history screenshot(s)** uploads the day's page from the courier history to the private repository. GitHub Actions reads it with Tesseract OCR, so late or forgotten O presses and stacked orders are corrected from the record itself. |
 | **Route recording** | A GPS fix every 15 s throughout the shift, whether I am riding or standing still, tagged *waiting* or *delivering*. A switch, **Record delivery trips too**, keeps the full route and exact drop-off points as well; it is off by default and the data go only to the private repository. |
 | **Logo** | A signal-orange map pin enclosing a white H3 hexagon and its centre point, on Nordic slate, with a monochrome version for the status bar. Colours are listed under [Design tokens](#design-tokens). |
@@ -436,6 +436,7 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | `app v11` | 26 Nov 2026 | History-screenshot upload with OCR in Actions; presses reconciled with the screenshot; stacked orders |
 | `app v13` | 26 Nov 2026 | **+** button for stacked orders: O, +, + means three orders and three D presses |
 | `app v14` | 26 Nov 2026 | Bayesian model: wait ranges, chance of an order within 10 min, *Stay here* advice; map data refresh themselves after every shift |
+| `app v15` | 26 Nov 2026 | A named place to stand ("Stand by K-Supermarket Arabia, Hämeentie 111") instead of only a hexagon, with a Navigate button |
 
 ---
 

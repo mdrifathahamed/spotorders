@@ -20,6 +20,7 @@ import pandas as pd
 
 from .osm_places import load_layer
 from . import bayes
+from .spots import build_spots
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = 8
@@ -117,6 +118,7 @@ def build() -> dict:
     n_orders = orders.size()
 
     cells = sorted(set(dens.index) | set(n_orders.index) | (set(totals.index) if totals is not None else set()))
+    spot_at = build_spots(df)
     out = []
     for c in cells:
         d = int(totals.n_total.get(c, 0)) if totals is not None else int(dens.get(c, 0))
@@ -138,6 +140,7 @@ def build() -> dict:
             cluster=cluster_at.get(c, (None, None))[0], cluster_places=cluster_at.get(c, (None, None))[1],
             top_venue=top.get(c) if c in top.index else None,
             wait=wait, wait_lo=lo, wait_hi=hi, p10=p10, n=n,
+            spot=spot_at.get(c),   # per bucket: [lat, lon, name, open places within 150 m, my pickups there, address]
         ))
     return dict(
         generated=pd.Timestamp.now(tz="Europe/Helsinki").isoformat(timespec="minutes"),

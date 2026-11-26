@@ -36,7 +36,15 @@ data class HexCell(
     val waitHi: Map<String, Double> = emptyMap(),
     /** Probability of an order within 10 minutes of waiting here. */
     val p10: Map<String, Double> = emptyMap(),
+    /** A concrete place to stand in this hexagon, per time bucket. */
+    val spot: Map<String, Spot> = emptyMap(),
 )
+
+/** Where to stand: the busiest food place at that time, centred on the open places within 150 m. */
+data class Spot(val lat: Double, val lon: Double, val name: String, val openNear: Int, val myNear: Int, val address: String)
+
+/** The point to go to for a hexagon: its waiting spot if known, otherwise the hexagon centre. */
+fun target(c: HexCell, bucket: String): Pair<Double, Double> = c.spot[bucket]?.let { it.lat to it.lon } ?: (c.lat to c.lon)
 
 data class AppMap(
     val generated: String, val buckets: List<String>, val totalOrders: Int, val cells: List<HexCell>,
@@ -101,12 +109,13 @@ fun recommend(map: AppMap, bucket: String, lat: Double?, lon: Double?): Recommen
     return candidates.mapNotNull { c ->
         val w = c.wait[bucket] ?: return@mapNotNull null
         if (lat == null || lon == null) return@mapNotNull Triple(c, w, w)
-        val d = haversineM(lat, lon, c.lat, c.lon)
+        val (tl, to) = target(c, bucket)
+        val d = haversineM(lat, lon, tl, to)
         if (d > 3_000) return@mapNotNull null
         val ride = d / 1000 / 14.0 * 60
         Triple(c, w, w + 0.5 * ride)
     }.minByOrNull { it.third }?.let { (c, w, _) ->
-        val d = if (lat != null && lon != null) haversineM(lat, lon, c.lat, c.lon) else null
+        val d = if (lat != null && lon != null) target(c, bucket).let { haversineM(lat, lon, it.first, it.second) } else null
         val best = Recommendation(c, bucket, w, d, d?.let { it / 1000 / 14.0 * 60 }, estimate(map, c, bucket))
         // compare with the hexagon I am standing in
         val here = if (lat != null && lon != null)
@@ -114,7 +123,10 @@ fun recommend(map: AppMap, bucket: String, lat: Double?, lon: Double?): Recommen
                 ?.takeIf { haversineM(lat, lon, it.lat, it.lon) < 600 } else null
         val hereEst = here?.let { estimate(map, it, bucket) }
         if (here != null && hereEst != null && here.h3 != c.h3 && (best.est?.hi ?: w) >= hereEst.lo)
-            Recommendation(here, bucket, hereEst.wait, 0.0, 0.0, hereEst, stay = true)
+            Recommendation(here, bucket, hereEst.wait,
+                target(here, bucket).let { haversineM(lat!!, lon!!, it.first, it.second) },
+                target(here, bucket).let { haversineM(lat!!, lon!!, it.first, it.second) / 1000 / 14.0 * 60 },
+                hereEst, stay = true)
         else best
     }
 }
@@ -177,6 +189,13 @@ object MapRepository {
                 waitLo = dict(c.optJSONObject("wait_lo"), buckets),
                 waitHi = dict(c.optJSONObject("wait_hi"), buckets),
                 p10 = dict(c.optJSONObject("p10"), buckets),
+                spot = c.optJSONObject("spot")?.let { o ->
+                    buckets.mapNotNull { b ->
+                        o.optJSONArray(b)?.let { a ->
+                            b to Spot(a.getDouble(0), a.getDouble(1), a.getString(2), a.optInt(3), a.optInt(4), a.optString(5, ""))
+                        }
+                    }.toMap()
+                } ?: emptyMap(),
             )
         }
         val wk = js.optJSONObject("model")?.optJSONObject("weekend")
