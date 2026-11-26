@@ -208,7 +208,9 @@ Mall of Tripla, Citycenter and Kampin keskus).
 | **Proven Wolt venues** | Each venue I have picked up from is matched to one OpenStreetMap place (a shared name word within 60 m, otherwise ≤25 m) and counts **×3**. |
 | **Clusters** | DBSCAN with a 100 m radius and at least 5 places; clusters larger than 80 places are split again at 70, 45 and 30 m and named after the shopping centre they sit in. |
 
-$$\text{food score}(h, d, t) = \sum_{\text{places in } h} w_{\text{type}} \times b_{\text{Wolt}} \times P(\text{open on day } d \text{ at hour } t)$$
+```math
+\text{food score}(h, d, t) = \sum_{\text{places in } h} w_{\text{type}} \times b_{\text{Wolt}} \times P(\text{open on day } d \text{ at hour } t)
+```
 
 The effect is easiest to see at night: a hexagon packed with cafés looks promising at lunchtime, yet by 23:00 most of them
 have closed, and the map now scores it accordingly.
@@ -218,9 +220,13 @@ have closed, and the map now scores it accordingly.
 Each hexagon on the map is, in effect, a feeding patch, and the model estimates how long I can expect to wait in it at a
 given time of day. With so few observations per hexagon, the estimate is smoothed towards a prior (empirical Bayes):
 
-$$\text{expected wait}(h, b) = \frac{\sum \text{my waits in } h \text{ during } b \; + \; K \cdot \text{prior}}{n + K}, \qquad K = 4$$
+```math
+\text{expected wait}(h, b) = \frac{\sum \text{my waits in } h \text{ during } b \; + \; K \cdot \text{prior}}{n + K}, \qquad K = 4
+```
 
-$$\text{prior} = \overline{\text{wait}}_b \times \operatorname{clip}\!\left(\sqrt{\frac{\operatorname{median}(\text{food score}) + 1}{\text{food score} + 1}},\; 0.6,\; 1.8\right)$$
+```math
+\text{prior} = \overline{\text{wait}}_b \times \mathrm{clip}\left(\sqrt{\frac{\mathrm{median}(\text{food score}) + 1}{\text{food score} + 1}},\; 0.6,\; 1.8\right)
+```
 
 - A hexagon where I have never waited takes its value entirely from the restaurant layer; each wait I log there pulls the
   estimate towards what actually happens.
