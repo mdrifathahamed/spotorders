@@ -49,8 +49,10 @@ TYPE_WEIGHT = {"fast_food": 1.5, "food_court": 2.0, "restaurant": 1.2, "supermar
                "convenience": 1.0, "cafe": 0.6, "bakery": 0.5}
 WOLT_BOOST = 3.0
 MATCH_RADIUS_M = 60          # an OSM place this close to a venue I picked up from is that venue
-CLUSTER_EPS_M = 120
+CLUSTER_EPS_M = 100
 CLUSTER_MIN_PLACES = 5
+MAX_CLUSTER = 80             # bigger clusters are split again with a smaller radius
+MALLS = REF / "osm_malls.csv"
 
 
 # ------------------------------------------------------------------ download
@@ -60,7 +62,7 @@ def fetch() -> pd.DataFrame:
     s, w, n, e = BBOX
     q = f"""[out:json][timeout:120];
     (nwr["amenity"~"^(restaurant|fast_food|cafe|food_court)$"]({s},{w},{n},{e});
-     nwr["shop"~"^(supermarket|convenience|bakery)$"]({s},{w},{n},{e}););
+     nwr["shop"~"^(supermarket|convenience|bakery|mall)$"]({s},{w},{n},{e}););
     out center tags;"""
     import time
 
@@ -110,44 +112,78 @@ def week_vector(spec) -> np.ndarray | None:
         return None
 
 
+def _tokens(name: str) -> set:
+    import re
+    stop = {"helsinki", "ravintola", "restaurant", "redi", "kallio", "hakaniemi", "arabia", "the", "and", "&"}
+    return {t for t in re.findall(r"[a-zåäö0-9]+", str(name).lower()) if len(t) > 2 and t not in stop}
+
+
 def mark_wolt_venues(places: pd.DataFrame) -> pd.Series:
-    """True for OSM places matching a venue I picked up from (within 60 m of its coordinates)."""
+    """One OSM place per venue I picked up from: the closest one (<=60 m) sharing a name word,
+    otherwise the closest one within 25 m. Shopping-centre venues are matched by name only."""
     v = pd.read_csv(ROOT / "data/reference/venues.csv").dropna(subset=["lat"])
-    v = v[v.geocode_quality.isin(["osm", "address"])]   # exact positions only
     hit = np.zeros(len(places), dtype=bool)
-    for lat, lon in zip(v.lat, v.lon):
-        near = (abs(places.lat - lat) < 0.001) & (abs(places.lon - lon) < 0.002)
-        for i in np.flatnonzero(near.values):
-            if haversine_m(lat, lon, places.lat.iat[i], places.lon.iat[i]) <= MATCH_RADIUS_M:
-                hit[i] = True
+    for name, lat, lon, q in zip(v.venue, v.lat, v.lon, v.geocode_quality):
+        if q not in ("osm", "address", "mall"):
+            continue
+        near = np.flatnonzero(((abs(places.lat - lat) < 0.0012) & (abs(places.lon - lon) < 0.0024)).values)
+        cand = []
+        for i in near:
+            d = haversine_m(lat, lon, places.lat.iat[i], places.lon.iat[i])
+            same_name = bool(_tokens(name) & _tokens(places.name.iat[i]))
+            if (same_name and d <= (150 if q == "mall" else MATCH_RADIUS_M)) or (q != "mall" and d <= 25):
+                cand.append((not same_name, d, i))        # name match first, then distance
+        if cand:
+            hit[min(cand)[2]] = True
     return pd.Series(hit, index=places.index)
 
 
-def clusters(places: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame]:
-    """DBSCAN on positions (haversine). Returns cluster id per place (-1 = none) and a cluster table."""
+def _dbscan(X: np.ndarray, eps_m: float, min_samples: int) -> np.ndarray:
     from sklearn.cluster import DBSCAN
+    return DBSCAN(eps=eps_m / 6_371_008.8, min_samples=min_samples, metric="haversine").fit_predict(X)
 
+
+def clusters(places: pd.DataFrame, malls: pd.DataFrame | None = None) -> tuple[pd.Series, pd.DataFrame]:
+    """DBSCAN (haversine). Clusters bigger than MAX_CLUSTER are split again with a smaller radius, so the
+    dense city centre breaks into food courts and blocks instead of one blob. Clusters are named after the
+    shopping centre they sit in (OSM shop=mall within 150 m), else a venue I picked up from, else the
+    biggest named place."""
     X = np.radians(places[["lat", "lon"]].values)
-    labels = DBSCAN(eps=CLUSTER_EPS_M / 6_371_008.8, min_samples=CLUSTER_MIN_PLACES,
-                    metric="haversine").fit_predict(X)
+    labels = _dbscan(X, CLUSTER_EPS_M, CLUSTER_MIN_PLACES)
+    next_id = labels.max() + 1
+    for eps in (70, 45, 30):
+        for cid in [c for c in set(labels) if c >= 0 and (labels == c).sum() > MAX_CLUSTER]:
+            idx = np.flatnonzero(labels == cid)
+            sub = _dbscan(X[idx], eps, CLUSTER_MIN_PLACES)
+            labels[idx] = np.where(sub >= 0, sub + next_id, -1)
+            next_id = labels.max() + 1
+    # renumber 0..k-1
+    uniq = {c: k for k, c in enumerate(sorted(set(labels) - {-1}))}
+    labels = np.array([uniq.get(c, -1) for c in labels])
     lab = pd.Series(labels, index=places.index)
+
     rows = []
-    for cid in sorted(set(labels) - {-1}):
+    for cid in sorted(uniq.values()):
         g = places[lab == cid]
-        named = g[g.name != ""]
-        # name the cluster after a place I have picked up from, else the most weighted named place
-        pick = named[named.wolt_venue] if named.wolt_venue.any() else named
-        label = pick.sort_values("weight", ascending=False).name.iloc[0] if len(pick) else f"cluster {cid}"
+        clat, clon = g.lat.mean(), g.lon.mean()
+        label = None
+        if malls is not None and len(malls):
+            d = [haversine_m(clat, clon, a, b) for a, b in zip(malls.lat, malls.lon)]
+            if min(d) <= 150:
+                label = malls.name.iat[int(np.argmin(d))]
+        if not label:
+            named = g[g.name != ""]
+            pick = named[named.wolt_venue] if named.wolt_venue.any() else named
+            label = pick.sort_values("weight", ascending=False).name.iloc[0] if len(pick) else f"cluster {cid}"
         rows.append(dict(cluster_id=int(cid), label=label, n_places=len(g),
                          n_wolt_venues=int(g.wolt_venue.sum()), weight=round(g.weight.sum(), 1),
-                         lat=round(g.lat.mean(), 5), lon=round(g.lon.mean(), 5),
-                         h3_r8=h3.latlng_to_cell(g.lat.mean(), g.lon.mean(), 8)))
+                         lat=round(clat, 5), lon=round(clon, 5), h3_r8=h3.latlng_to_cell(clat, clon, 8)))
     return lab, pd.DataFrame(rows)
 
 
 # ------------------------------------------------------------------ build
-def build_tables(places: pd.DataFrame):
-    places = places.reset_index(drop=True).copy()
+def build_tables(places: pd.DataFrame, malls: pd.DataFrame | None = None):
+    places = places[places.kind != "mall"].reset_index(drop=True).copy()
     places["h3_r8"] = [h3.latlng_to_cell(a, b, 8) for a, b in zip(places.lat, places.lon)]
     places["h3_r9"] = [h3.latlng_to_cell(a, b, 9) for a, b in zip(places.lat, places.lon)]
     places["wolt_venue"] = mark_wolt_venues(places)
@@ -160,7 +196,7 @@ def build_tables(places: pd.DataFrame):
     # P(open) for every place and hour: known -> its own hours, unknown -> city-wide share
     P = np.vstack([v if v is not None else share_open for v in vecs])
 
-    lab, cl = clusters(places)
+    lab, cl = clusters(places, malls)
     places["cluster_id"] = lab.values
 
     rows = []
@@ -202,7 +238,11 @@ def refresh(force: bool = False) -> bool:
             return False
         raw = pd.read_csv(PLACES, keep_default_na=False)[
             ["osm_id", "name", "kind", "brand", "lat", "lon", "opening_hours"]]
-    places, tab, cl = build_tables(raw)
+        malls = pd.read_csv(MALLS, keep_default_na=False) if MALLS.exists() else None
+    else:
+        malls = raw[(raw.kind == "mall") & (raw.name != "")][["osm_id", "name", "lat", "lon"]]
+        malls.to_csv(MALLS, index=False)
+    places, tab, cl = build_tables(raw, malls)
     places.to_csv(PLACES, index=False)
     tab.to_csv(OPEN_HEX, index=False)
     cl.to_csv(CLUSTERS, index=False)
