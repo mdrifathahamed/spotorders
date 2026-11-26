@@ -37,11 +37,12 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Rebuild dataset, ranking and figures
+      - name: Rebuild dataset, ranking, figures and the app map
         run: |
           python -m pipeline.build_dataset
           python -m pipeline.baseline
           python -m pipeline.figures
+          python -m pipeline.app_map
 
       - name: Save full dataset to the private repo
         working-directory: data/private
@@ -59,7 +60,7 @@ jobs:
         run: |
           git config user.name "spotorders-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/sample figures
+          git add data/sample data/reference figures
           if ! git diff --cached --quiet; then
             git commit -m "Update public dataset summaries"
             git pull --rebase --quiet

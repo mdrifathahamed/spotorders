@@ -128,7 +128,7 @@ class LocationLoggerService : Service() {
             return NotificationCompat.Builder(ctx, CHANNEL)
                 .setContentTitle("Spotorders · on shift")
                 .setContentText(text)
-                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setSmallIcon(io.github.mdrifathahamed.spotorders.R.drawable.ic_stat_spot)
                 .setContentIntent(open)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)

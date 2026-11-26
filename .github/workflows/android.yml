@@ -28,6 +28,9 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      - name: Bundle the latest map as the app's offline copy
+        run: mkdir -p android/app/src/main/assets && cp data/sample/app_map.json android/app/src/main/assets/app_map.json
+
       - name: Build APK
         run: gradle -p android assembleRelease --stacktrace
 

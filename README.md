@@ -1,3 +1,5 @@
+<img src="docs/logo.png" width="96" align="right" alt="Spotorders logo">
+
 # Spotorders
 
 **Where should I wait so the next delivery order comes fastest?**
@@ -47,8 +49,12 @@ where I wait the least, by hour, weekday and weather.
 2. **The app uploads automatically** to a private GitHub repo whenever there is internet. With no signal,
    it waits and retries.
 3. **Each new order triggers a GitHub Actions run** that rebuilds the dataset: it measures how long I waited
-   (from "Free again" to "Got order"), matches the position to the nearest restaurant, adds the weather from
+   (from D to the next O), matches the position to the nearest restaurant, adds the weather from
    Open-Meteo, and updates the public summaries and charts in this repo.
+4. **The app's Map tab** downloads the result (`data/sample/app_map.json`) and colours H3 hexagons over an
+   OpenStreetMap base map by expected wait for the current time of day, green to red. A card names the best
+   spot within 3 km, counting the ride there at half weight. Hexagons where I have never waited get an
+   estimate from OpenStreetMap restaurant density, so the map is useful from day one and learns from every shift.
 
 ## Privacy by design
 
@@ -90,15 +96,15 @@ I'll add a before/after chart here once the app has logged enough shifts.
 |---|---|---|
 | 1 | Dataset from screenshots, weather join, first heatmaps | done |
 | 2 | Android logger: GPS, floating O/D buttons, automatic upload to GitHub | done, in daily use |
-| 3 | Hexagon map in the app: expected wait now, nearest good spot | next |
-| 4 | Model: smoothed statistics → gradient boosting, OpenStreetMap restaurant density as a prior | baseline in `pipeline/baseline.py` |
+| 3 | Map tab: H3 hexagons coloured by expected wait, best spot now | done |
+| 4 | Model: smoothed statistics with an OpenStreetMap density prior (now) → gradient boosting with weather | smoothed version live in `pipeline/app_map.py` |
 
 ## Repo layout
 
 | Path | What |
 |---|---|
 | `android/` | Kotlin, Jetpack Compose, Room, WorkManager, fused location |
-| `pipeline/` | Python: `build_dataset`, `live` (app log → orders), `weather`, `geo`, `baseline`, `figures` |
+| `pipeline/` | Python: `build_dataset`, `live` (app log → orders), `weather`, `geo`, `baseline`, `app_map`, `figures` |
 | `data/sample/` | public, privacy-safe tables updated by the workflow |
 | `data/reference/` | restaurant coordinates and the weather hours for the screenshot history |
 | `docs/` | [phone setup](docs/INSTALL.md), [data dictionary](docs/data_dictionary.md) |
@@ -111,6 +117,7 @@ pip install -r requirements.txt
 python -m pipeline.build_dataset   # needs data/private (the private data repo)
 python -m pipeline.baseline
 python -m pipeline.figures
+python -m pipeline.app_map         # the hexagon map the phone app shows
 ```
 
 ## Limitations

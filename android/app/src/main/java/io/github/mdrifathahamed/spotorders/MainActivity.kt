@@ -10,7 +10,16 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import io.github.mdrifathahamed.spotorders.map.MapScreen
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -23,6 +32,7 @@ import io.github.mdrifathahamed.spotorders.data.EventType
 import io.github.mdrifathahamed.spotorders.export.CsvExporter
 import io.github.mdrifathahamed.spotorders.location.LocationLoggerService
 import io.github.mdrifathahamed.spotorders.overlay.FloatingButtons
+import io.github.mdrifathahamed.spotorders.overlay.FloatingStyle
 import io.github.mdrifathahamed.spotorders.sync.EventRecorder
 import io.github.mdrifathahamed.spotorders.sync.SyncWorker
 import io.github.mdrifathahamed.spotorders.ui.HomeScreen
@@ -40,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
     /** Re-checked in onResume, after the user comes back from the overlay settings page. */
     private val overlayAllowed = mutableStateOf(false)
+    private val floatingStyle by lazy { mutableStateOf(FloatingStyle.load(this)) }
 
     private val askPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()) { }
@@ -59,6 +70,7 @@ class MainActivity : ComponentActivity() {
                 val fixes by dao.fixCount().collectAsState(initial = 0)
                 val pending by dao.pendingEvents().collectAsState(initial = 0)
                 val ordersToday by dao.offersSince(midnight).collectAsState(initial = 0)
+                val tab = remember { mutableIntStateOf(0) }
                 val refresh = remember { mutableIntStateOf(0) }
                 refresh.intValue  // read so the status recomposes after Save / Upload now
                 val status = SyncStatus(
@@ -68,7 +80,15 @@ class MainActivity : ComponentActivity() {
                                else DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(settings.lastSyncMillis)),
                     lastError = settings.lastError,
                 )
-                HomeScreen(
+                Surface(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                TabRow(selectedTabIndex = tab.intValue) {
+                    Tab(selected = tab.intValue == 0, onClick = { tab.intValue = 0 }, text = { Text("Shift") })
+                    Tab(selected = tab.intValue == 1, onClick = { tab.intValue = 1 }, text = { Text("Map") })
+                }
+                if (tab.intValue == 1) {
+                    MapScreen(owner = settings.owner, publicRepo = settings.publicRepo.ifBlank { "spotorders" })
+                } else HomeScreen(
                     last = last, ordersToday = ordersToday, fixCount = fixes, status = status,
                     config = SyncConfig(settings.owner, settings.dataRepo, settings.publicRepo, settings.token),
                     onEvent = ::record,
@@ -86,7 +106,15 @@ class MainActivity : ComponentActivity() {
                             Uri.parse("package:$packageName")))
                     },
                     onShowButtons = { FloatingButtons.show(this) },
+                    floatingStyle = floatingStyle.value,
+                    onStyleChange = { st ->
+                        st.save(this)
+                        floatingStyle.value = st
+                        FloatingButtons.restyle(this)
+                    },
                 )
+                }
+                }
             }
         }
     }

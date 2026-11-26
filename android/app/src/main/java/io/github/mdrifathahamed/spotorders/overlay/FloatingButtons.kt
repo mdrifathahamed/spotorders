@@ -36,6 +36,7 @@ import kotlin.math.hypot
  *   O = got an order, D = delivered / free again.
  * Drag to move (snaps to the nearest screen edge), drag onto the ✕ at the bottom to hide.
  * The button you are expected to press next is bright; the other one is dimmed but still works.
+ * After 3 s without a touch the buttons fade to the chosen transparency (see FloatingStyle).
  */
 object FloatingButtons {
     private val main = Handler(Looper.getMainLooper())
@@ -47,6 +48,9 @@ object FloatingButtons {
     private var btnD: TextView? = null
     private var params: WindowManager.LayoutParams? = null
     private var trash: TextView? = null
+
+    private var style = FloatingStyle()
+    private val fade = Runnable { root?.animate()?.alpha(style.idleAlpha)?.setDuration(400)?.start() }
 
     private var lastType: EventType? = null
     private var lastTap = mutableMapOf<EventType, Long>()
@@ -64,10 +68,31 @@ object FloatingButtons {
 
     fun hide() = main.post { removeAll() }
 
+    /** Re-create with a new size / transparency / shape (called from the settings screen). */
+    fun restyle(ctx: Context) = main.post {
+        if (root != null) {
+            removeAll()
+            create(ctx.applicationContext)
+        }
+    }
+
+    private fun wake() {
+        main.removeCallbacks(fade)
+        root?.animate()?.cancel()
+        root?.alpha = 1f
+    }
+
+    private fun scheduleFade() {
+        main.removeCallbacks(fade)
+        main.postDelayed(fade, 3_000)
+    }
+
     /** Called after every recorded event so the right button lights up. */
     fun onEvent(type: EventType) = main.post {
         lastType = type
         refresh()
+        wake()
+        scheduleFade()
     }
 
     // ------------------------------------------------------------------ build
@@ -75,7 +100,12 @@ object FloatingButtons {
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, ctx.resources.displayMetrics).toInt()
 
     private fun circle(color: Int, strokeDp: Int = 0, ctx: Context? = null) = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
+        if (style.square && ctx != null) {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(ctx, style.sizeDp * 0.28f).toFloat()
+        } else {
+            shape = GradientDrawable.OVAL
+        }
         setColor(color)
         if (strokeDp > 0 && ctx != null) setStroke(dp(ctx, strokeDp.toFloat()), Color.WHITE)
     }
@@ -85,13 +115,14 @@ object FloatingButtons {
     @SuppressLint("ClickableViewAccessibility")
     private fun create(ctx: Context) {
         val windowManager = ctx.getSystemService(WindowManager::class.java)
-        val size = dp(ctx, 64f)
+        style = FloatingStyle.load(ctx)
+        val size = dp(ctx, style.sizeDp.toFloat())
         val gap = dp(ctx, 10f)
 
         fun button(label: String, type: EventType) = TextView(ctx).apply {
             text = label
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, style.sizeDp * 0.44f)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             elevation = dp(ctx, 6f).toFloat()
@@ -131,6 +162,7 @@ object FloatingButtons {
         windowManager.addView(layout, lp)
         wm = windowManager; root = layout; btnO = o; btnD = d; params = lp
         refresh()
+        scheduleFade()
 
         // light up the right button from the last stored event
         io.launch {
@@ -165,7 +197,11 @@ object FloatingButtons {
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
             gravity = Gravity.CENTER
-            background = circle(0xCC000000.toInt(), 2, ctx)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0xCC000000.toInt())
+                setStroke(dp(ctx, 2f), Color.WHITE)
+            }
         }
         val lp = WindowManager.LayoutParams(
             size, size, overlayType(),
@@ -186,6 +222,7 @@ object FloatingButtons {
 
     private fun removeAll() {
         hideTrash()
+        main.removeCallbacks(fade)
         root?.let { runCatching { wm?.removeView(it) } }
         root = null; btnO = null; btnD = null; params = null
     }
@@ -215,6 +252,7 @@ object FloatingButtons {
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    wake()
                     downX = e.rawX; downY = e.rawY
                     startX = lp.x; startY = lp.y
                     dragging = false
@@ -247,10 +285,12 @@ object FloatingButtons {
                     } else {
                         tap(v as TextView)
                     }
+                    scheduleFade()
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     hideTrash()
                     dragging = false
+                    scheduleFade()
                 }
             }
             return true

@@ -29,6 +29,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.mdrifathahamed.spotorders.data.EventType
 import io.github.mdrifathahamed.spotorders.data.ShiftEvent
+import io.github.mdrifathahamed.spotorders.overlay.FloatingStyle
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Slider
+import kotlin.math.roundToInt
 
 data class SyncConfig(val owner: String, val dataRepo: String, val publicRepo: String, val token: String)
 
@@ -52,15 +57,16 @@ fun HomeScreen(
     overlayAllowed: Boolean = false,
     onAllowOverlay: () -> Unit = {},
     onShowButtons: () -> Unit = {},
+    floatingStyle: FloatingStyle = FloatingStyle(),
+    onStyleChange: (FloatingStyle) -> Unit = {},
 ) {
     val onShift = last != null && last.type != EventType.SHIFT_END
     var showSettings by remember { mutableStateOf(!status.configured) }
 
     Column(
-        Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp).verticalScroll(rememberScrollState()),
+        Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("Spotorders", style = MaterialTheme.typography.headlineMedium)
         Text(
             if (onShift) "On shift · $ordersToday orders today · $fixCount GPS points"
             else "Off shift · $ordersToday orders today",
@@ -85,6 +91,7 @@ fun HomeScreen(
             Text("Floating buttons: O = got an order, D = delivered. They appear over every app during a shift. " +
                  "Drag to move, drag onto the ✕ to hide.", style = MaterialTheme.typography.bodyMedium)
             if (onShift) OutlinedButton(onShowButtons, Modifier.fillMaxWidth()) { Text("Show floating O / D buttons") }
+            FloatingStyleControls(floatingStyle, onStyleChange)
         } else {
             Text("Allow \"Display over other apps\" to get the floating O / D buttons on top of the Wolt app.",
                  style = MaterialTheme.typography.bodyMedium)
@@ -131,5 +138,33 @@ private fun SettingsForm(config: SyncConfig, onSave: (SyncConfig) -> Unit, onDon
         Button({ onSave(SyncConfig(owner, dataRepo, publicRepo, token)); onDone() }, Modifier.fillMaxWidth()) {
             Text("Save")
         }
+    }
+}
+
+
+@Composable
+private fun FloatingStyleControls(style: FloatingStyle, onChange: (FloatingStyle) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Button size", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Small" to 52, "Medium" to 64, "Large" to 76).forEach { (label, dp) ->
+                FilterChip(selected = style.sizeDp == dp, onClick = { onChange(style.copy(sizeDp = dp)) },
+                    label = { Text(label) })
+            }
+        }
+        Text("Shape", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = !style.square, onClick = { onChange(style.copy(square = false)) }, label = { Text("Round") })
+            FilterChip(selected = style.square, onClick = { onChange(style.copy(square = true)) }, label = { Text("Square") })
+        }
+        Text("See-through when idle: ${(100 - style.idleAlpha * 100).roundToInt()} %",
+            style = MaterialTheme.typography.labelLarge)
+        var alpha by remember(style.idleAlpha) { mutableStateOf(style.idleAlpha) }
+        Slider(
+            value = alpha,
+            onValueChange = { alpha = it },
+            onValueChangeFinished = { onChange(style.copy(idleAlpha = alpha)) },
+            valueRange = 0.15f..1f,
+        )
     }
 }
