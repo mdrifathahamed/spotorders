@@ -1,5 +1,6 @@
 package io.github.mdrifathahamed.spotorders.overlay
 
+import io.github.mdrifathahamed.spotorders.sync.OrderState
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
@@ -180,7 +181,7 @@ object FloatingButtons {
         // light up the right button from the last stored event
         io.launch {
             val last = AppDb.get(ctx).dao().lastEventNow()?.type
-            io.github.mdrifathahamed.spotorders.sync.OrderState.restore(ctx)
+            OrderState.restore(ctx)
             main.post { lastType = last; refresh() }
         }
     }
@@ -189,7 +190,7 @@ object FloatingButtons {
         val o = btnO ?: return
         val d = btnD ?: return
         val plus = btnPlus ?: return
-        val onBoard = io.github.mdrifathahamed.spotorders.sync.OrderState.onBoard
+        val onBoard = OrderState.onBoard
         val waitingForOrder = onBoard == 0
         o.background = circle(if (waitingForOrder) ORANGE else DIM, 2, o.context)
         // + appears only while delivering: each tap adds one more order on board
