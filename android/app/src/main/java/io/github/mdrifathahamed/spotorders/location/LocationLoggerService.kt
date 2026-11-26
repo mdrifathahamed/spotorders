@@ -74,7 +74,9 @@ class LocationLoggerService : Service() {
         // restore "delivering?" after the app was restarted mid-order
         scope.launch {
             val last = AppDb.get(this@LocationLoggerService).dao().lastEventNow()
-            if (last?.type == EventType.OFFER) PrivacyFilter.delivering = true
+            if (last?.type in setOf(EventType.OFFER, EventType.EXTRA, EventType.DROP)) PrivacyFilter.delivering = true
+            io.github.mdrifathahamed.spotorders.sync.OrderState.restore(this@LocationLoggerService)
+            FloatingButtons.onEvent(last?.type ?: EventType.SHIFT_START)
         }
         PrivacyFilter.recordTrips = io.github.mdrifathahamed.spotorders.data.AppSettings(this).recordDeliveryTrips
         // A fix every 15 s whether moving or standing still (no distance filter), so that
@@ -118,7 +120,9 @@ class LocationLoggerService : Service() {
         /** Update the notification text after a button press ("Order logged 18:32"). */
         fun refreshNotification(ctx: Context, type: EventType, atMillis: Long) {
             val text = when (type) {
-                EventType.OFFER -> "Order logged ${hhmm.format(Instant.ofEpochMilli(atMillis))} · tap Free again after delivery"
+                EventType.OFFER -> "Order logged ${hhmm.format(Instant.ofEpochMilli(atMillis))} · + for another order, D after delivery"
+                EventType.EXTRA -> "${io.github.mdrifathahamed.spotorders.sync.OrderState.onBoard} orders on board · D after each drop-off"
+                EventType.DROP -> "Delivered one · ${io.github.mdrifathahamed.spotorders.sync.OrderState.onBoard} left"
                 EventType.FREE -> "Free since ${hhmm.format(Instant.ofEpochMilli(atMillis))} · waiting for an order"
                 EventType.SHIFT_START -> "Waiting for an order"
                 EventType.SHIFT_END -> return
@@ -145,8 +149,8 @@ class LocationLoggerService : Service() {
                 .setContentIntent(open)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .addAction(0, "Got order", action(EventReceiver.ACTION_OFFER, 1))
-                .addAction(0, "Free again", action(EventReceiver.ACTION_FREE, 2))
+                .addAction(0, "Order / +1", action(EventReceiver.ACTION_OFFER, 1))
+                .addAction(0, "Delivered", action(EventReceiver.ACTION_FREE, 2))
                 .addAction(0, "Show O/D", showButtons)
                 .build()
         }

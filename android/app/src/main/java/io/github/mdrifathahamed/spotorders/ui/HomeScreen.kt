@@ -89,12 +89,14 @@ fun HomeScreen(
         if (!onShift) {
             Button({ onEvent(EventType.SHIFT_START) }, Modifier.fillMaxWidth().height(80.dp)) { Text("Start shift") }
         } else {
-            val waitingForOrder = last?.type != EventType.OFFER
-            Button({ onEvent(EventType.OFFER) }, Modifier.fillMaxWidth().height(96.dp), enabled = waitingForOrder) {
-                Text("Got an order")
+            val waitingForOrder = last?.type !in setOf(EventType.OFFER, EventType.EXTRA, EventType.DROP)
+            if (waitingForOrder) {
+                Button({ onEvent(EventType.OFFER) }, Modifier.fillMaxWidth().height(96.dp)) { Text("Got an order") }
+            } else {
+                Button({ onEvent(EventType.EXTRA) }, Modifier.fillMaxWidth().height(72.dp)) { Text("+ Another order") }
             }
             Button({ onEvent(EventType.FREE) }, Modifier.fillMaxWidth().height(96.dp), enabled = !waitingForOrder) {
-                Text("Delivered · free again")
+                Text("Delivered")
             }
             OutlinedButton({ onEvent(EventType.SHIFT_END) }, Modifier.fillMaxWidth()) { Text("End shift") }
         }

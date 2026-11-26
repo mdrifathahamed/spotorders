@@ -136,10 +136,12 @@ class MainActivity : ComponentActivity() {
             else -> Unit
         }
         lifecycleScope.launch {
-            EventRecorder.record(applicationContext, type)
-            val msg = when (type) {
+            val recorded = EventRecorder.record(applicationContext, type)
+            val msg = when (recorded) {
                 EventType.SHIFT_START -> "Shift started"
                 EventType.OFFER -> "Order logged"
+                EventType.EXTRA -> "Extra order logged · ${io.github.mdrifathahamed.spotorders.sync.OrderState.onBoard} on board"
+                EventType.DROP -> "Delivered one · ${io.github.mdrifathahamed.spotorders.sync.OrderState.onBoard} left"
                 EventType.FREE -> "Free again"
                 EventType.SHIFT_END -> "Shift ended"
             }

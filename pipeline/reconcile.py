@@ -42,13 +42,13 @@ def reconcile(hist: pd.DataFrame, private_dir: Path):
     hist["press_lag_min"] = np.nan
     hist["chained"] = False
     ev["date"] = ev.ts.dt.date
-    days = sorted(set(hist.ts.dt.date) & set(ev.loc[ev.type.eq("OFFER"), "date"]))
+    days = sorted(set(hist.ts.dt.date) & set(ev.loc[ev.type.isin(["OFFER", "EXTRA"]), "date"]))
     report = []
 
     for day in days:
         tasks = hist[hist.ts.dt.date.eq(day)].sort_values("ts")
         de = ev[ev.date.eq(day)]
-        offers = de[de.type.eq("OFFER")].drop_duplicates("ts")
+        offers = de[de.type.isin(["OFFER", "EXTRA"])].drop_duplicates("ts")
         marks = de[de.type.isin(["FREE", "SHIFT_START", "SHIFT_END"])]
         used = set()
         prev_ts = None

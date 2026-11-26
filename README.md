@@ -135,7 +135,7 @@ newer (`minSdk 26`). GitHub Actions builds and signs every release, so the app n
 | Component | Behaviour |
 |---|---|
 | **Shift tab** | Starts and ends the foreground logging service; fallback O/D buttons; upload status; GitHub settings with the token encrypted by the Android Keystore; CSV export. |
-| **Floating O / D buttons** | Chat-head buttons drawn over every app, including the Wolt Partner app. The button needed next is bright (**O** signal orange, **D** delivery blue), both fade when idle, a second tap within 4 s is ignored (winter gloves), and they snap to the screen edge. Drag onto the ✕ to hide them. |
+| **Floating O / D buttons** | Chat-head buttons drawn over every app, including the Wolt Partner app. The button needed next is bright (**O** signal orange, **D** delivery blue); while delivering a **+** button appears for each extra order, and **D** counts down the drop-offs, both fade when idle, a second tap within 4 s is ignored (winter gloves), and they snap to the screen edge. Drag onto the ✕ to hide them. |
 | **Notification** | **Got order**, **Free again** and **Show O/D** actions, so the app never has to be opened mid-shift. |
 | **Map tab** | H3 hexagons coloured by expected wait, from forest green (≤10 min) to crimson (>24 min). Solid cells come from my own orders and faint cells from the restaurant prior. Time-of-day chips, and a **Best spot now** card that picks the shortest expected wait within 3 km, counting the ride there at half weight. |
 | **History screenshot** | After a shift, **Add history screenshot(s)** uploads the day's page from the courier history to the private repository. GitHub Actions reads it with Tesseract OCR, so late or forgotten O presses and stacked orders are corrected from the record itself. |
@@ -294,8 +294,8 @@ notifications and *Display over other apps* → set the battery to *Unrestricted
 |---|---|
 | Going online in the Wolt Partner app | **Start shift** |
 | Accepting an order | floating **O** |
-| Handing over the food | floating **D** |
-| A second order while delivering | floating **O+** |
+| Handing over the food | floating **D**, once per drop-off (it shows **D2**, **D3** while more are on board) |
+| Another order while still delivering | floating **+** (appears while delivering; press once per extra order) |
 | Going offline | **End shift** |
 | After the shift | screenshot the day in the courier history → **Add history screenshot(s)** |
 
@@ -394,7 +394,8 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | `app v8` | 26 Nov 2026 | Restaurant layer in the map: open places, matched venues, clusters |
 | `app v9` | 26 Nov 2026 | Nordic redesign: new logo and launcher icon, colour palette across the app |
 | `app v10` | 26 Nov 2026 | Route recording every 15 s, moving or still; optional delivery-trip recording; stays and moves in the pipeline |
-| `app v11` | 26 Nov 2026 | History-screenshot upload with OCR in Actions; presses reconciled with the screenshot; **O+** for stacked orders |
+| `app v11` | 26 Nov 2026 | History-screenshot upload with OCR in Actions; presses reconciled with the screenshot; stacked orders |
+| `app v12` | 26 Nov 2026 | **+** button for stacked orders: O, +, + means three orders and three D presses |
 
 ---
 

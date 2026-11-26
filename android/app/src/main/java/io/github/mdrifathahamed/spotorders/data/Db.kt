@@ -32,10 +32,12 @@ data class Fix(
 )
 
 /**
- * A one-tap event. FREE = delivered and waiting again, OFFER = got a new task.
+ * A one-tap event. OFFER = got a new task while free, EXTRA = another order added while
+ * still delivering (the + button), DROP = one order delivered but more still on board,
+ * FREE = last order delivered, waiting again.
  * The time between a FREE and the next OFFER is the waiting time the model predicts.
  */
-enum class EventType { SHIFT_START, FREE, OFFER, SHIFT_END }
+enum class EventType { SHIFT_START, FREE, OFFER, SHIFT_END, EXTRA, DROP }
 
 @Entity(tableName = "events")
 data class ShiftEvent(
@@ -63,6 +65,9 @@ interface LogDao {
     @Query("SELECT * FROM events ORDER BY tsMillis")
     suspend fun allEvents(): List<ShiftEvent>
 
+    @Query("SELECT * FROM events ORDER BY tsMillis DESC LIMIT 50")
+    suspend fun recentEvents(): List<ShiftEvent>
+
     @Query("SELECT * FROM fixes ORDER BY tsMillis")
     suspend fun allFixes(): List<Fix>
 
@@ -72,7 +77,7 @@ interface LogDao {
     @Query("SELECT COUNT(*) FROM fixes")
     fun fixCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM events WHERE type = 'OFFER' AND tsMillis >= :sinceMillis")
+    @Query("SELECT COUNT(*) FROM events WHERE type IN ('OFFER', 'EXTRA') AND tsMillis >= :sinceMillis")
     fun offersSince(sinceMillis: Long): Flow<Int>
 
     // --- upload queue

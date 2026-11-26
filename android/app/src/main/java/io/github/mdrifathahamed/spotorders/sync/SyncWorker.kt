@@ -59,7 +59,7 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
 
             // New order or end of shift: ask the public repo to rebuild the dataset now
             if (settings.publicRepo.isNotBlank() &&
-                events.any { it.type == EventType.OFFER || it.type == EventType.SHIFT_END }) {
+                events.any { it.type == EventType.OFFER || it.type == EventType.EXTRA || it.type == EventType.SHIFT_END }) {
                 runCatching { gh.dispatch(settings.publicRepo, "new-app-data") }
             }
             settings.lastSyncMillis = System.currentTimeMillis()

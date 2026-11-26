@@ -45,6 +45,7 @@ object FloatingButtons {
     private var wm: WindowManager? = null
     private var root: LinearLayout? = null
     private var btnO: TextView? = null
+    private var btnPlus: TextView? = null
     private var btnD: TextView? = null
     private var params: WindowManager.LayoutParams? = null
     private var trash: TextView? = null
@@ -58,9 +59,13 @@ object FloatingButtons {
     private const val ORANGE = 0xFFE85D2A.toInt()
     private const val BLUE = 0xFF2B6CB0.toInt()
     private const val DIM = 0x9918222F.toInt()
-    private const val ORANGE_SOFT = 0x99E85D2A.toInt()
     private const val GREEN = 0xFF2F855A.toInt()
-    private const val DEBOUNCE_MS = 4_000L   // ignore accidental double taps of the same button
+    // ignore accidental double taps of the same button (gloves); + and D may be pressed again sooner
+    private fun debounceMs(type: EventType) = when (type) {
+        EventType.EXTRA -> 1_200L
+        EventType.FREE -> 2_000L
+        else -> 4_000L
+    }
 
     fun canDraw(ctx: Context) = Settings.canDrawOverlays(ctx)
     val isShowing get() = root != null
@@ -129,15 +134,21 @@ object FloatingButtons {
             elevation = dp(ctx, 6f).toFloat()
             layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(0, gap / 2, 0, gap / 2) }
             tag = type
-            contentDescription = if (type == EventType.OFFER) "Got an order" else "Delivered, free again"
+            contentDescription = when (type) {
+                EventType.OFFER -> "Got an order"
+                EventType.EXTRA -> "Another order added while delivering"
+                else -> "Delivered"
+            }
         }
 
         val o = button("O", EventType.OFFER)
+        val plus = button("+", EventType.EXTRA)
         val d = button("D", EventType.FREE)
         val layout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(gap / 2, gap / 2, gap / 2, gap / 2)
             addView(o)
+            addView(plus)
             addView(d)
         }
 
@@ -158,16 +169,18 @@ object FloatingButtons {
 
         val touch = DragOrTap(ctx, windowManager, lp, prefs)
         o.setOnTouchListener(touch)
+        plus.setOnTouchListener(touch)
         d.setOnTouchListener(touch)
 
         windowManager.addView(layout, lp)
-        wm = windowManager; root = layout; btnO = o; btnD = d; params = lp
+        wm = windowManager; root = layout; btnO = o; btnPlus = plus; btnD = d; params = lp
         refresh()
         scheduleFade()
 
         // light up the right button from the last stored event
         io.launch {
             val last = AppDb.get(ctx).dao().lastEventNow()?.type
+            io.github.mdrifathahamed.spotorders.sync.OrderState.restore(ctx)
             main.post { lastType = last; refresh() }
         }
     }
@@ -175,10 +188,15 @@ object FloatingButtons {
     private fun refresh() {
         val o = btnO ?: return
         val d = btnD ?: return
-        val waitingForOrder = lastType != EventType.OFFER
-        // While delivering, O stays usable as "O+": another (stacked) order was added.
-        o.text = if (waitingForOrder) "O" else "O+"
-        o.background = circle(if (waitingForOrder) ORANGE else ORANGE_SOFT, 2, o.context)
+        val plus = btnPlus ?: return
+        val onBoard = io.github.mdrifathahamed.spotorders.sync.OrderState.onBoard
+        val waitingForOrder = onBoard == 0
+        o.background = circle(if (waitingForOrder) ORANGE else DIM, 2, o.context)
+        // + appears only while delivering: each tap adds one more order on board
+        plus.visibility = if (waitingForOrder) View.GONE else View.VISIBLE
+        plus.background = circle(ORANGE, 2, plus.context)
+        // D shows how many drop-offs are left when more than one
+        d.text = if (onBoard >= 2) "D$onBoard" else "D"
         d.background = circle(if (!waitingForOrder) BLUE else DIM, 2, d.context)
     }
 
@@ -227,7 +245,7 @@ object FloatingButtons {
         hideTrash()
         main.removeCallbacks(fade)
         root?.let { runCatching { wm?.removeView(it) } }
-        root = null; btnO = null; btnD = null; params = null
+        root = null; btnO = null; btnPlus = null; btnD = null; params = null
     }
 
     // ------------------------------------------------------------------ touch
@@ -313,7 +331,7 @@ object FloatingButtons {
         private fun tap(v: TextView) {
             val type = v.tag as EventType
             val now = System.currentTimeMillis()
-            if (now - (lastTap[type] ?: 0L) < DEBOUNCE_MS) return
+            if (now - (lastTap[type] ?: 0L) < debounceMs(type)) return
             lastTap[type] = now
             flash(v)
             vibrate(ctx)

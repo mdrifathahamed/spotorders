@@ -3,9 +3,10 @@
 The app appends every button press to `live/events.csv` in the private data repo
 (checked out at data/private/). Columns: ts, type, lat, lon, accuracy_m, fix_age_s.
 
-Event types: SHIFT_START, FREE (delivered, waiting again), OFFER (got a task), SHIFT_END.
-For each OFFER the *measured* wait is the time since the last FREE or SHIFT_START
-in the same shift. The courier position is the real GPS fix at the moment of the tap.
+Event types: SHIFT_START, OFFER (got a task while free), EXTRA (the + button: another order
+added while delivering), DROP (one delivered, more on board), FREE (last one delivered, waiting
+again), SHIFT_END. For each OFFER the *measured* wait is the time since the last FREE or
+SHIFT_START in the same shift; an EXTRA order has a wait of 0 (it is stacked). The courier position is the real GPS fix at the moment of the tap.
 """
 from __future__ import annotations
 
@@ -55,7 +56,7 @@ def build_live(private_dir: Path, venues: pd.DataFrame) -> pd.DataFrame:
         for _, e in g.iterrows():
             if e.type in ("SHIFT_START", "FREE"):
                 wait_start = e.ts
-            elif e.type == "OFFER":
+            elif e.type in ("OFFER", "EXTRA"):
                 venue, dist = nearest_venue(e.lat, e.lon, venues)
                 rows.append(dict(
                     source="app_log", shift_id=sid, ts=e.ts,
@@ -69,7 +70,9 @@ def build_live(private_dir: Path, venues: pd.DataFrame) -> pd.DataFrame:
                     gps_accuracy_m=e.get("accuracy_m", np.nan),
                     distance_km=np.nan, est_task_min=np.nan,
                     gap_since_prev_min=(e.ts - prev_offer).total_seconds() / 60 if prev_offer is not None else np.nan,
-                    wait_min=(e.ts - wait_start).total_seconds() / 60 if wait_start is not None else np.nan,
+                    wait_min=0.0 if e.type == "EXTRA" else
+                             ((e.ts - wait_start).total_seconds() / 60 if wait_start is not None else np.nan),
+                    chained=e.type == "EXTRA",
                     wait_is_estimated=False,
                     pay_eur=np.nan, tip_eur=0.0,
                 ))

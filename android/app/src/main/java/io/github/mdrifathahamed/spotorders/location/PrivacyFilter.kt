@@ -25,7 +25,7 @@ object PrivacyFilter {
 
     fun onEvent(type: EventType, lat: Double?, lon: Double?, atMillis: Long) {
         when (type) {
-            EventType.OFFER -> delivering = true
+            EventType.OFFER, EventType.EXTRA, EventType.DROP -> delivering = true
             EventType.FREE -> {
                 delivering = false
                 freeAt = atMillis

@@ -17,12 +17,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** The single place where a button press becomes data: save locally, then queue the upload. */
 object EventRecorder {
 
-    suspend fun record(ctx: Context, type: EventType) {
+    /** Stores a press and returns what it was recorded as (O may become EXTRA, D may become DROP). */
+    suspend fun record(ctx: Context, tap: EventType): EventType {
         val dao = AppDb.get(ctx).dao()
+        OrderState.restore(ctx)
+        val type = OrderState.resolve(tap)
         val now = System.currentTimeMillis()
         // Try for a fresh fix (max 5 s); fall back to the logger's latest one.
         val fresh = freshFix(ctx)
-        val atDoor = type == EventType.FREE          // D is pressed at the customer's door
+        val atDoor = type == EventType.FREE || type == EventType.DROP   // D is pressed at the customer's door
         if (fresh != null && (PrivacyFilter.recordTrips || (!atDoor && !PrivacyFilter.delivering)))
             dao.insertFix(fresh.copy(state = if (PrivacyFilter.delivering) "DELIVERING" else "WAITING"))
         val fix = fresh ?: dao.lastFix()
@@ -39,6 +42,7 @@ object EventRecorder {
         LocationLoggerService.refreshNotification(ctx, type, now)
         FloatingButtons.onEvent(type)
         SyncWorker.enqueue(ctx)
+        return type
     }
 
     @SuppressLint("MissingPermission")
