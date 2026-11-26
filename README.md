@@ -395,7 +395,7 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | `app v9` | 26 Nov 2026 | Nordic redesign: new logo and launcher icon, colour palette across the app |
 | `app v10` | 26 Nov 2026 | Route recording every 15 s, moving or still; optional delivery-trip recording; stays and moves in the pipeline |
 | `app v11` | 26 Nov 2026 | History-screenshot upload with OCR in Actions; presses reconciled with the screenshot; stacked orders |
-| `app v12` | 26 Nov 2026 | **+** button for stacked orders: O, +, + means three orders and three D presses |
+| `app v13` | 26 Nov 2026 | **+** button for stacked orders: O, +, + means three orders and three D presses |
 
 ---
 
