@@ -147,12 +147,18 @@ fun MapScreen(owner: String, publicRepo: String) {
                          style = MaterialTheme.typography.bodyMedium)
                 } else {
                     val where = rec.cell.topVenue ?: "this area"
-                    Text("Best spot now: near $where", style = MaterialTheme.typography.titleMedium)
-                    val dist = rec.distanceM?.let { d ->
+                    Text(if (rec.stay) "Stay here: nothing within 3 km is clearly better"
+                         else "Best spot now: near $where", style = MaterialTheme.typography.titleMedium)
+                    val dist = if (rec.stay) "" else rec.distanceM?.let { d ->
                         " · ${if (d < 1000) "${d.roundToInt()} m" else "%.1f km".format(d / 1000)}" +
                             " away (${rec.rideMin!!.roundToInt().coerceAtLeast(1)} min ride)"
                     } ?: ""
-                    Text("~${rec.waitMin.roundToInt()} min expected wait$dist", style = MaterialTheme.typography.bodyMedium)
+                    val e = rec.est
+                    val range = e?.let { " (likely ${it.lo.roundToInt()}–${it.hi.roundToInt()})" } ?: ""
+                    Text("~${rec.waitMin.roundToInt()} min expected wait$range$dist", style = MaterialTheme.typography.bodyMedium)
+                    e?.p10?.let {
+                        Text("${(it * 100).roundToInt()} % chance of an order within 10 min", style = MaterialTheme.typography.bodyMedium)
+                    }
                     val n = rec.cell.n[rec.bucket] ?: 0
                     val openTxt = rec.cell.open[rec.bucket]?.let { "~${it.roundToInt()} of ${rec.cell.foodPlaces} food places open" }
                         ?: "${rec.cell.foodPlaces} food places"
@@ -203,7 +209,8 @@ fun MapScreen(owner: String, publicRepo: String) {
 private fun drawHexes(mv: MapView, map: AppMap?, bucket: String, rec: Recommendation?, myLocation: MyLocationNewOverlay) {
     mv.overlays.clear()
     map?.cells?.forEach { c ->
-        val w = c.wait[bucket] ?: return@forEach
+        val est = estimate(map ?: return@forEach, c, bucket) ?: return@forEach
+        val w = est.wait
         val n = c.n[bucket] ?: 0
         val rgb = waitColor(w)
         val alpha = if (n > 0) 0x99 else 0x44
@@ -217,7 +224,8 @@ private fun drawHexes(mv: MapView, map: AppMap?, bucket: String, rec: Recommenda
             val openLine = c.open[bucket]?.let {
                 "Open at this time: ~${it.roundToInt()} of ${c.foodPlaces} food places (${c.hoursKnown} with known hours)"
             } ?: "Food places: ${c.foodPlaces}"
-            snippet = "~${w.roundToInt()} min expected wait (${BUCKET_LABELS[bucket]})<br/>" +
+            snippet = "~${w.roundToInt()} min expected wait, likely ${est.lo.roundToInt()}–${est.hi.roundToInt()} (${BUCKET_LABELS[bucket]})<br/>" +
+                (est.p10?.let { "Chance of an order within 10 min: ${(it * 100).roundToInt()} %<br/>" } ?: "") +
                 "My orders here at this time: $n · all times: ${c.myOrders}<br/>" +
                 "$openLine<br/>" +
                 "Places I've picked up from: ${c.woltVenues}" +
@@ -230,7 +238,7 @@ private fun drawHexes(mv: MapView, map: AppMap?, bucket: String, rec: Recommenda
         mv.overlays.add(Marker(mv).apply {
             position = GeoPoint(it.cell.lat, it.cell.lon)
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Best spot now"
+            title = if (it.stay) "Stay here" else "Best spot now"
             snippet = "~${it.waitMin.roundToInt()} min expected wait"
         })
     }

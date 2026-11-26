@@ -1,0 +1,58 @@
+{
+  "best_half_life_days": 30,
+  "test_days": 14,
+  "test_waits": 68,
+  "models": {
+    "old": {
+      "log_score": -3.978,
+      "log_score_se": 0.168,
+      "brier_10min": 0.233
+    },
+    "bucket_only": {
+      "log_score": -3.957,
+      "log_score_se": 0.122,
+      "brier_10min": 0.235
+    },
+    "bayes_hlinf": {
+      "log_score": -3.99,
+      "log_score_se": 0.102,
+      "brier_10min": 0.244
+    },
+    "bayes_hl30": {
+      "log_score": -3.989,
+      "log_score_se": 0.101,
+      "brier_10min": 0.242
+    },
+    "bayes_hl14": {
+      "log_score": -3.994,
+      "log_score_se": 0.101,
+      "brier_10min": 0.24
+    },
+    "bayes_hl7": {
+      "log_score": -4.008,
+      "log_score_se": 0.1,
+      "brier_10min": 0.24
+    }
+  },
+  "alpha_now": 1000.0,
+  "gamma_now": 0.0,
+  "multipliers_now": {
+    "weekend": {
+      "estimate": 0.686,
+      "lo95": 0.389,
+      "hi95": 1.211,
+      "n": 17,
+      "used": false,
+      "factor": 1.0
+    },
+    "rain": {
+      "estimate": 1.095,
+      "lo95": 0.726,
+      "hi95": 1.653,
+      "n": 34,
+      "used": false,
+      "factor": 1.0
+    }
+  },
+  "note": "Rolling origin: each later shift day predicted from the days before it. log_score = mean log predictive density of the observed waits (higher is better); brier_10min = error of P(order within 10 min) (lower is better). alpha = pseudo-orders a place needs before it may differ from the time-of-day average (high = no detectable difference between places yet); gamma = weight of the restaurant layer (0 = not predictive yet)."
+}

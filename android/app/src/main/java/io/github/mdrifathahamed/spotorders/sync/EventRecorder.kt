@@ -42,6 +42,7 @@ object EventRecorder {
         LocationLoggerService.refreshNotification(ctx, type, now)
         FloatingButtons.onEvent(type)
         SyncWorker.enqueue(ctx)
+        if (type == EventType.SHIFT_END) io.github.mdrifathahamed.spotorders.map.MapUpdateWorker.afterShift(ctx)
         return type
     }
 

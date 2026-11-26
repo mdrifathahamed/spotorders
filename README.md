@@ -219,33 +219,73 @@ have closed, and the map now scores it accordingly.
 
 ## 9. The model and the map
 
-Each hexagon on the map is, in effect, a feeding patch, and the model estimates how long I can expect to wait in it at a
-given time of day. With so few observations per hexagon, the estimate is smoothed towards a prior (empirical Bayes):
+Each hexagon on the map is, in effect, a feeding patch, and the question a forager asks of a patch is not how long the
+last visit took but how fast food arrives there. The model therefore treats orders reaching a waiting courier as a
+Poisson process with a rate for every hexagon and time of day. A wait that ends in an order adds one event and its
+minutes of exposure; a wait that ends without one (I gave up and ended the shift) adds exposure only, which the old
+averaging model simply threw away.
 
 ```math
-\text{expected wait}(h, b) = \frac{\sum \text{my waits in } h \text{ during } b \; + \; K \cdot \text{prior}}{n + K}, \qquad K = 4
+\lambda_{cb} = R_b \, g_{cb} \, \theta_c, \qquad \theta_c \sim \mathrm{Gamma}(\alpha, \alpha), \qquad
+\theta_c \mid \text{data} \sim \mathrm{Gamma}\Big(\alpha + n_c,\; \alpha + \sum_b R_b \, g_{cb} \, E_{cb}\Big)
 ```
 
-```math
-\text{prior} = \overline{\text{wait}}_b \times \mathrm{clip}\left(\sqrt{\frac{\mathrm{median}(\text{food score}) + 1}{\text{food score} + 1}},\; 0.6,\; 1.8\right)
-```
+$R_b$ is the order rate for time of day $b$, $g_{cb}$ the restaurant layer (open, type-weighted places, scaled by an
+exponent $\gamma$), and $\theta_c$ how much better or worse hexagon $c$ is than that; $n_c$ and $E_{cb}$ are my orders
+and minutes of waiting there. A hexagon's effect is shared across the day, so every wait in it informs all five time
+buckets. Nothing is set by hand:
 
-- A hexagon where I have never waited takes its value entirely from the restaurant layer; each wait I log there pulls the
-  estimate towards what actually happens.
-- `data/sample/app_map.json` holds about 190 hexagons, with their boundaries, the expected wait and number of my orders for
-  each time of day, open places, matched venues and cluster names. It is aggregated: no timestamps and no GPS points.
-- **Training data for the next model** come from the route: every stay of three minutes or more, with where it was, when,
-  how long it lasted and whether an order ended it, is in effect one trial of waiting in that patch. Stays that end without
-  an order (I gave up and moved) are censored waits, which a survival model can use rather than discard.
-- **Next:** gradient boosting (LightGBM or XGBoost) on the per-order feature table, once a few hundred measured waits from
-  the app exist, validated by time (earlier weeks to train, later weeks to test) and compared against this smoothed baseline.
+| Choice | How it is made, every night |
+|---|---|
+| $\alpha$: how far a place may stray from the time-of-day rate | maximum marginal likelihood across hexagons (empirical Bayes) |
+| $\gamma$: weight of the restaurant layer | the same marginal likelihood |
+| How fast old shifts fade | backtest of half-lives (none, 30, 14, 7 days); the best one is used |
+| Weekend and rain | Poisson regression with exposure offset; applied only once the 95% interval excludes "no effect" |
+
+For each hexagon and time of day the app now shows the expected wait, an 80% interval for it and the chance of an order
+within 10 minutes, and **Best spot now** only tells me to move when a hexagon's interval lies entirely below the one I
+am standing in; otherwise it says *stay here*. Waits from the GPS era are split across the hexagons I actually stood in,
+and a wait of zero (an order accepted while still delivering) is left out, because it says nothing about the place.
+
+**What the model says so far.** It is sobering. On 127 waits, the marginal likelihood puts $\alpha$ at its upper limit
+and $\gamma$ at zero, which is to say that, once the time of day is accounted for, the data cannot yet tell one place
+from another, and the restaurant layer does not yet predict waits either. The same holds when places are pooled into
+districts: Kallio, Kalasatama and Arabia all sit within about 10% of the time-of-day rate. Weekends (×0.686,
+95% interval 0.389–1.211) and rain
+(×1.095, 0.726–1.653)
+are not distinguishable from no effect. Season is: waits in November have been about 40% shorter than in October,
+which is why recent shifts are weighted more.
+
+Rolling-origin backtest (14 later shift days, 68 waits, each day predicted only from the days before it):
+
+| Model | Log score (higher is better) | Brier, P(order ≤ 10 min) (lower is better) |
+|---|---|---|
+| Time-of-day average only | -3.957 ± 0.122 | 0.235 |
+| Previous map (smoothed average, K = 4) | -3.978 ± 0.168 | 0.233 |
+| Bayesian model (half-life 30 d) | -3.989 ± 0.101 | 0.242 |
+
+The three are indistinguishable within their standard errors. The Bayesian model is not more accurate yet, but it is
+more honest: its predictions vary least from day to day, and it says so when it does not know. Why, then, can a
+courier feel so sure that some corners are better? Partly because a screenshot only records where the order came from,
+not where I had been waiting, so screenshot-era waits blur the places together; partly because a handful of good
+evenings is very easy to remember. Measured waits from the app, with the route showing exactly where I stood and for how
+long, are what will sharpen the picture. As a rough guide, a hexagon whose orders really come 40% faster should stand
+out after about ten measured waits in it, and one that is 25% faster after about twenty-five. When that happens,
+$\alpha$ falls, the hexagons on the map stop looking alike, and no new app version is needed.
+
+- `data/sample/app_map.json` holds about 190 hexagons, with boundaries, the expected wait, its interval and P(order within
+  10 min) for each time of day, open places, matched venues and cluster names, plus the model's hyperparameters and the
+  backtest scores. It is aggregated: no timestamps and no GPS points. `data/sample/model_check.json` holds the backtest.
+- **Next:** once a few hundred measured waits exist, gradient boosting or a Bayesian GLM with more covariates
+  (temperature, darkness, nearby clusters), compared against this model with the same rolling backtest.
 
 ## 10. Automation
 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | **Build Android app** | Push to `android/**` | Builds the APK with a fixed signing key, bundles the latest `app_map.json` as an offline copy, and publishes release `app-vN` |
-| **Update dataset** | Each order from the phone (`repository_dispatch`), every night at 03:17 Helsinki time, or by hand | Checks out `spotorders-data` into `data/private/`, runs the pipeline, commits the full dataset to the private repo and the public summaries here |
+| **Update dataset** | Each order from the phone (`repository_dispatch`), every night at 03:17 Helsinki time, or by hand | Checks out `spotorders-data` into `data/private/`, reads new screenshots, runs the pipeline and the backtest, refits the model, commits the full dataset to the private repo and the public summaries here |
+| **On the phone** | 12 min after *End shift*, and every 12 h | Downloads the refitted map into the offline copy, so the model improves without installing anything |
 
 ## 11. Privacy by design
 
@@ -270,7 +310,7 @@ From the 189 historical tasks (a small sample, so every figure below is provisio
 | Orders per active hour | ~1.9 (first to last order of a shift) |
 | Time spent idle | ~35 of every 60 minutes |
 | Median wait between tasks | ~16 min (lunch ~13, late evening ~17.5) |
-| Rainy vs dry hours | ~13 vs ~17 min median wait |
+| Rainy vs dry hours | ~13 vs ~17 min median wait (not significant once time of day is accounted for; see section 9) |
 | Busiest window | Friday and Saturday evenings |
 
 ![Tasks by weekday and hour](figures/weekday_hour.png)
@@ -278,8 +318,7 @@ From the 189 historical tasks (a small sample, so every figure below is provisio
 Why is waiting, rather than riding, the bigger cost? On a typical shift I spent more than half of every hour standing
 still, so what separates a good hour from a bad one is the idle time between tasks rather than the tasks themselves.
 Cutting the wait by five minutes per order would add about one extra order every three hours, which is the gain
-the map is meant to deliver. Likewise, why should rainy hours give shorter waits? The likely explanation is that more
-people order food when it rains, although with only 50 rainy-hour tasks this remains a hint rather than a result.
+the map is meant to deliver. Likewise, do rainy hours give shorter waits? In the evening the medians say yes (about 13 against 21 minutes), which fits the idea that more people order food when it rains, yet with 34 rainy-hour waits the model in section 9 cannot separate the effect from chance once the time of day is taken into account, so for now it remains a hint rather than a result.
 
 ![Where tasks started](figures/hex_map.png)
 

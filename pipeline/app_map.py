@@ -1,13 +1,10 @@
 """Export the map the phone app draws: H3 hexagons with an expected wait per time of day.
 
-expected wait in a hexagon, for a time bucket =
-    (sum of my waits there + K * prior) / (n + K)
-
-The prior is the bucket's average wait, scaled by the hexagon's food score for
-that time of day (second layer, pipeline/osm_places.py): food places that are
-OPEN in those hours, weighted by type, with places I have picked up from counted
-x3. Hexagons full of closed cafés at night stop looking good. Unexplored hexagons
-get a sensible colour, and my own waits take over as they accumulate.
+The numbers come from the Bayesian waiting-time model (pipeline/bayes.py): a gamma-Poisson
+order rate per hexagon, shared across the time of day, with a prior from the time-of-day rate
+and the restaurant layer, recent shifts weighted more (half-life chosen by the nightly
+backtest). For every hexagon and time bucket the app gets the expected wait, an 80% interval
+for it and the probability of an order within 10 minutes.
 
 Output: data/sample/app_map.json (public: aggregated, no times, no GPS points)
 Run:    python -m pipeline.app_map
@@ -22,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from .osm_places import load_layer
+from . import bayes
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = 8
@@ -105,34 +103,30 @@ def build() -> dict:
             cluster_at.setdefault(r.h3_r8, (r.label, int(r.n_places)))
 
     obs = df.dropna(subset=["h3", "wait_min"])
-    bucket_mean = obs.groupby("time_bucket").wait_min.mean().reindex(BUCKETS)
-    bucket_mean = bucket_mean.fillna(obs.wait_min.mean())
     stats = obs.groupby(["h3", "time_bucket"]).wait_min.agg(["size", "sum"])
+    score = {b: {"score": scores[b].score, "median": float(scores[b].score.median())} for b in BUCKETS} if scores else None
+    check_f = ROOT / "data/sample/model_check.json"
+    check = json.loads(check_f.read_text()) if check_f.exists() else {}
+    half_life = check.get("best_half_life_days")
+    x = bayes.exposure_table(df)
+    mult = bayes.multipliers(x)
+    today = pd.Timestamp.now(tz="Europe/Helsinki").strftime("%Y-%m-%d")
+    model = bayes.fit(x, score, mult, half_life, today)
     orders = df.dropna(subset=["h3"]).groupby("h3")
     top = orders.anchor_venue.agg(top_name)
     n_orders = orders.size()
 
     cells = sorted(set(dens.index) | set(n_orders.index) | (set(totals.index) if totals is not None else set()))
-    med = float(np.median(dens.values)) if len(dens) else 1.0
-    med_score = {b: float(scores[b].score.median()) for b in BUCKETS} if scores else {}
     out = []
     for c in cells:
         d = int(totals.n_total.get(c, 0)) if totals is not None else int(dens.get(c, 0))
-        wait, n, open_ = {}, {}, {}
+        wait, lo, hi, p10, n, open_ = {}, {}, {}, {}, {}, {}
         for b in BUCKETS:
-            if scores:   # time-aware: open, type-weighted, Wolt-boosted food places in these hours
-                sc = float(scores[b].score.get(c, 0.0))
+            if scores:
                 open_[b] = round(float(scores[b].open.get(c, 0.0)), 1)
-                factor = float(np.clip(((med_score[b] + 1) / (sc + 1)) ** 0.5, 0.6, 1.8))
-            else:        # fallback: plain count of food places
-                factor = float(np.clip(((med + 1) / (d + 1)) ** 0.5, 0.6, 1.6))
-            prior = bucket_mean[b] * factor
-            if (c, b) in stats.index:
-                cnt, tot = stats.loc[(c, b)]
-            else:
-                cnt, tot = 0, 0.0
-            wait[b] = round((tot + K * prior) / (cnt + K), 1)
-            n[b] = int(cnt)
+            a_, b_, _, _ = bayes.posterior(model, c, b)
+            wait[b], lo[b], hi[b], p10[b] = bayes.summary(a_, b_)
+            n[b] = int(stats.loc[(c, b)]["size"]) if (c, b) in stats.index else 0
         lat, lon = h3.cell_to_latlng(c)
         out.append(dict(
             h3=c, lat=round(lat, 5), lon=round(lon, 5),
@@ -143,13 +137,18 @@ def build() -> dict:
             wolt_venues=int(totals.n_wolt.get(c, 0)) if totals is not None else None,
             cluster=cluster_at.get(c, (None, None))[0], cluster_places=cluster_at.get(c, (None, None))[1],
             top_venue=top.get(c) if c in top.index else None,
-            wait=wait, n=n,
+            wait=wait, wait_lo=lo, wait_hi=hi, p10=p10, n=n,
         ))
     return dict(
         generated=pd.Timestamp.now(tz="Europe/Helsinki").isoformat(timespec="minutes"),
         h3_resolution=RES, buckets=BUCKETS,
         bucket_hours={"morning": "06-11", "lunch": "11-14", "afternoon": "14-17", "dinner": "17-21", "late": "21-06"},
         total_orders=int(len(df)), cells=out,
+        model=dict(kind="gamma-poisson, hexagon effect shared across time of day", alpha=model["alpha"],
+                   gamma=model["gamma"], half_life_days=half_life, waits=int(x.events.sum()),
+                   exposure_hours=round(float(x.exposure.sum()) / 60, 1),
+                   weekend=mult["weekend"], rain=mult["rain"],
+                   backtest=check.get("models")),
     )
 
 

@@ -48,6 +48,7 @@ jobs:
           python -m pipeline.build_dataset
           python -m pipeline.baseline
           python -m pipeline.figures
+          python -m pipeline.bayes             # backtest + choose how fast old shifts fade
           python -m pipeline.app_map
 
       - name: Save full dataset to the private repo

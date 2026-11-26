@@ -31,11 +31,38 @@ data class HexCell(
     val woltVenues: Int = 0,
     val cluster: String? = null,
     val clusterPlaces: Int = 0,
+    /** 80% interval for the expected wait (Bayesian model). */
+    val waitLo: Map<String, Double> = emptyMap(),
+    val waitHi: Map<String, Double> = emptyMap(),
+    /** Probability of an order within 10 minutes of waiting here. */
+    val p10: Map<String, Double> = emptyMap(),
 )
 
-data class AppMap(val generated: String, val buckets: List<String>, val totalOrders: Int, val cells: List<HexCell>)
+data class AppMap(
+    val generated: String, val buckets: List<String>, val totalOrders: Int, val cells: List<HexCell>,
+    /** Rate multiplier on Saturdays and Sundays; 1.0 until the data show a clear weekend effect. */
+    val weekendFactor: Double = 1.0,
+)
 
-data class Recommendation(val cell: HexCell, val bucket: String, val waitMin: Double, val distanceM: Double?, val rideMin: Double?)
+/** Expected wait, its 80% interval and P(order within 10 min) for one hexagon now. */
+data class Estimate(val wait: Double, val lo: Double, val hi: Double, val p10: Double?)
+
+fun estimate(map: AppMap, c: HexCell, bucket: String): Estimate? {
+    val w = c.wait[bucket] ?: return null
+    val weekend = java.time.LocalDate.now(ZoneId.of("Europe/Helsinki")).dayOfWeek.value >= 6
+    val f = if (weekend) map.weekendFactor else 1.0
+    val p = c.p10[bucket]?.let { 1 - (1 - it).pow(f) }
+    return Estimate(w / f, (c.waitLo[bucket] ?: w) / f, (c.waitHi[bucket] ?: w) / f, p)
+}
+
+/**
+ * stay = true: no hexagon nearby is clearly better than where you are (its 80% interval does not
+ * lie entirely below yours), so the card says to stay instead of sending you across town on noise.
+ */
+data class Recommendation(
+    val cell: HexCell, val bucket: String, val waitMin: Double, val distanceM: Double?, val rideMin: Double?,
+    val est: Estimate? = null, val stay: Boolean = false,
+)
 
 val BUCKET_LABELS = linkedMapOf(
     "morning" to "Morning 06–11", "lunch" to "Lunch 11–14", "afternoon" to "Afternoon 14–17",
@@ -80,7 +107,15 @@ fun recommend(map: AppMap, bucket: String, lat: Double?, lon: Double?): Recommen
         Triple(c, w, w + 0.5 * ride)
     }.minByOrNull { it.third }?.let { (c, w, _) ->
         val d = if (lat != null && lon != null) haversineM(lat, lon, c.lat, c.lon) else null
-        Recommendation(c, bucket, w, d, d?.let { it / 1000 / 14.0 * 60 })
+        val best = Recommendation(c, bucket, w, d, d?.let { it / 1000 / 14.0 * 60 }, estimate(map, c, bucket))
+        // compare with the hexagon I am standing in
+        val here = if (lat != null && lon != null)
+            map.cells.minByOrNull { haversineM(lat, lon, it.lat, it.lon) }
+                ?.takeIf { haversineM(lat, lon, it.lat, it.lon) < 600 } else null
+        val hereEst = here?.let { estimate(map, it, bucket) }
+        if (here != null && hereEst != null && here.h3 != c.h3 && (best.est?.hi ?: w) >= hereEst.lo)
+            Recommendation(here, bucket, hereEst.wait, 0.0, 0.0, hereEst, stay = true)
+        else best
     }
 }
 
@@ -139,8 +174,19 @@ object MapRepository {
                 woltVenues = c.optInt("wolt_venues", 0),
                 cluster = if (c.isNull("cluster")) null else c.optString("cluster").ifBlank { null },
                 clusterPlaces = c.optInt("cluster_places", 0),
+                waitLo = dict(c.optJSONObject("wait_lo"), buckets),
+                waitHi = dict(c.optJSONObject("wait_hi"), buckets),
+                p10 = dict(c.optJSONObject("p10"), buckets),
             )
         }
-        return AppMap(js.optString("generated"), buckets, js.optInt("total_orders"), cells)
+        val wk = js.optJSONObject("model")?.optJSONObject("weekend")
+        val weekendFactor = if (wk?.optBoolean("used", false) == true) wk.optDouble("factor", 1.0) else 1.0
+        return AppMap(js.optString("generated"), buckets, js.optInt("total_orders"), cells, weekendFactor)
     }
+
+    private fun dict(o: JSONObject?, keys: List<String>): Map<String, Double> =
+        o?.let { j -> keys.associateWith { j.optDouble(it, Double.NaN) }.filterValues { !it.isNaN() } } ?: emptyMap()
+
+    /** Background refresh (after a shift and twice a day), so the offline copy is always recent. */
+    suspend fun refresh(ctx: Context, owner: String, repo: String): Boolean = load(ctx, owner, repo, force = true).second == "Updated just now"
 }
