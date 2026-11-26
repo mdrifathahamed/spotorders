@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Uploads every not-yet-uploaded button press and GPS fix to the private data repo:
  *   live/events.csv            one line per button press
- *   live/fixes/YYYY-MM-DD.csv  GPS track per day
+ *   live/track/YYYY-MM-DD.csv  GPS track per day, every 15 s (older days: live/fixes/)
  * then pokes the public repo so its workflow rebuilds the dataset.
  * Runs whenever there is internet; retries with backoff if offline or GitHub fails.
  */
@@ -49,8 +49,9 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             val fixes = dao.unsyncedFixes(limit = 5000)
             fixes.groupBy { day(it.tsMillis) }.forEach { (d, list) ->
                 gh.appendCsv(
-                    settings.dataRepo, "live/fixes/$d.csv", "ts,lat,lon,accuracy_m,speed_mps",
-                    list.map { listOf(iso(it.tsMillis), it.lat, it.lon, it.accuracyM, it.speedMps ?: "").joinToString(",") },
+                    settings.dataRepo, "live/track/$d.csv", "ts,lat,lon,accuracy_m,speed_mps,bearing_deg,state",
+                    list.map { listOf(iso(it.tsMillis), it.lat, it.lon, it.accuracyM, it.speedMps ?: "",
+                        it.bearingDeg ?: "", it.state).joinToString(",") },
                     "app: ${list.size} gps fixes",
                 )
                 dao.markFixesSynced(list.map { it.id })

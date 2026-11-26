@@ -38,7 +38,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Foreground service: records a GPS fix every 15 s (or 20 m) during a shift and shows a
+ * Foreground service: records a GPS fix every 15 s, moving or still, during a shift and shows a
  * notification with "Got order" / "Free again" buttons, so the app never needs to be opened.
  * Uploads the GPS track to GitHub every 15 minutes.
  */
@@ -54,7 +54,9 @@ class LocationLoggerService : Service() {
                 if (PrivacyFilter.drop(loc.latitude, loc.longitude, loc.time)) return@forEach
                 scope.launch {
                     dao.insertFix(Fix(tsMillis = loc.time, lat = loc.latitude, lon = loc.longitude,
-                        accuracyM = loc.accuracy, speedMps = if (loc.hasSpeed()) loc.speed else null))
+                        accuracyM = loc.accuracy, speedMps = if (loc.hasSpeed()) loc.speed else null,
+                        bearingDeg = if (loc.hasBearing()) loc.bearing else null,
+                        state = if (PrivacyFilter.delivering) "DELIVERING" else "WAITING"))
                 }
             }
         }
@@ -74,8 +76,13 @@ class LocationLoggerService : Service() {
             val last = AppDb.get(this@LocationLoggerService).dao().lastEventNow()
             if (last?.type == EventType.OFFER) PrivacyFilter.delivering = true
         }
+        PrivacyFilter.recordTrips = io.github.mdrifathahamed.spotorders.data.AppSettings(this).recordDeliveryTrips
+        // A fix every 15 s whether moving or standing still (no distance filter), so that
+        // stays and moves can both be reconstructed from the track.
         val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15_000L)
-            .setMinUpdateDistanceMeters(20f)
+            .setMinUpdateIntervalMillis(10_000L)
+            .setMinUpdateDistanceMeters(0f)
+            .setWaitForAccurateLocation(false)
             .build()
         try {
             client.requestLocationUpdates(req, callback, Looper.getMainLooper())

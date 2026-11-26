@@ -34,6 +34,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
 import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Switch
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import io.github.mdrifathahamed.spotorders.data.AppSettings
+import io.github.mdrifathahamed.spotorders.location.PrivacyFilter
 
 data class SyncConfig(val owner: String, val dataRepo: String, val publicRepo: String, val token: String)
 
@@ -97,6 +104,9 @@ fun HomeScreen(
                  style = MaterialTheme.typography.bodyMedium)
             Button(onAllowOverlay, Modifier.fillMaxWidth()) { Text("Allow floating buttons") }
         }
+
+        HorizontalDivider()
+        RouteRecordingControls()
 
         HorizontalDivider()
         Text(
@@ -166,5 +176,34 @@ private fun FloatingStyleControls(style: FloatingStyle, onChange: (FloatingStyle
             onValueChangeFinished = { onChange(style.copy(idleAlpha = alpha)) },
             valueRange = 0.15f..1f,
         )
+    }
+}
+
+
+/** Route recording: the GPS track is always kept while waiting; this adds delivery trips. */
+@Composable
+private fun RouteRecordingControls() {
+    val ctx = LocalContext.current
+    val settings = remember { AppSettings(ctx) }
+    var trips by remember { mutableStateOf(settings.recordDeliveryTrips) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Route recording", style = MaterialTheme.typography.titleSmall)
+        Text("During a shift your position is saved every 15 s, moving or standing still, " +
+             "so that stops and rides can be learnt from later.",
+             style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Record delivery trips too", style = MaterialTheme.typography.bodyMedium)
+                Text(if (trips) "Full route and exact drop-off points (private repo only)."
+                     else "Off: no GPS between O and D, drop-offs rounded to ~100 m.",
+                     style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.width(8.dp))
+            Switch(checked = trips, onCheckedChange = {
+                trips = it
+                settings.recordDeliveryTrips = it
+                PrivacyFilter.recordTrips = it
+            })
+        }
     }
 }

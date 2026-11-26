@@ -41,5 +41,14 @@ class AppSettings(ctx: Context) {
         get() = prefs.getString("last_error", "") ?: ""
         set(v) = prefs.edit().putString("last_error", v).apply()
 
+    /**
+     * Off (default): no GPS between O and D, and the D tap is rounded to ~100 m.
+     * On: the whole route is kept, delivery trips and exact drop-off points included
+     * (stored only in the private data repo).
+     */
+    var recordDeliveryTrips: Boolean
+        get() = prefs.getBoolean("record_delivery_trips", false)
+        set(v) = prefs.edit().putBoolean("record_delivery_trips", v).apply()
+
     val isConfigured: Boolean get() = owner.isNotBlank() && dataRepo.isNotBlank() && token.isNotBlank()
 }

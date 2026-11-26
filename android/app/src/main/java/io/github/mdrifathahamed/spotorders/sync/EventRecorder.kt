@@ -23,7 +23,8 @@ object EventRecorder {
         // Try for a fresh fix (max 5 s); fall back to the logger's latest one.
         val fresh = freshFix(ctx)
         val atDoor = type == EventType.FREE          // D is pressed at the customer's door
-        if (fresh != null && !atDoor && !PrivacyFilter.delivering) dao.insertFix(fresh)
+        if (fresh != null && (PrivacyFilter.recordTrips || (!atDoor && !PrivacyFilter.delivering)))
+            dao.insertFix(fresh.copy(state = if (PrivacyFilter.delivering) "DELIVERING" else "WAITING"))
         val fix = fresh ?: dao.lastFix()
         PrivacyFilter.onEvent(type, fix?.lat, fix?.lon, now)
         dao.insertEvent(
@@ -46,7 +47,8 @@ object EventRecorder {
             LocationServices.getFusedLocationProviderClient(ctx)
                 .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
         }?.let { Fix(tsMillis = it.time, lat = it.latitude, lon = it.longitude,
-                     accuracyM = it.accuracy, speedMps = if (it.hasSpeed()) it.speed else null) }
+                     accuracyM = it.accuracy, speedMps = if (it.hasSpeed()) it.speed else null,
+                     bearingDeg = if (it.hasBearing()) it.bearing else null) }
     } catch (e: SecurityException) {
         null
     } catch (e: Exception) {

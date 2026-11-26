@@ -74,3 +74,16 @@ average wait in that time bucket. Lower is better. `rank_in_bucket` 1 = best.
 - `osm_food_places.csv`: one row per place, with `kind`, `opening_hours`, `hours_known`, `wolt_venue`, `weight`, `cluster_id`, H3 cells
 - `osm_open_hex.csv`: `h3_r8 × weekday × hour` with `n_total, n_hours_known, n_wolt_venues, n_open_known, open_est, food_score`
 - `osm_clusters.csv`: cluster label, size, matched Wolt venues, summed weight, centre
+
+
+## Route track (private: `spotorders-data/derived/`)
+
+Built by `pipeline/track.py` from `live/track/*.csv` (app v10+, a fix every 15 s) and `live/fixes/*.csv` (older versions).
+
+**`track_points.csv`**: one row per GPS fix: `ts`, `session_id`, `lat`, `lon`, `accuracy_m` (fixes worse than 50 m dropped), `speed_mps` (phone), `speed_calc_mps` (from consecutive fixes), `bearing_deg`, `state` (`WAITING` or `DELIVERING`), `segment` (`stay` or `move`), `stay_id`, `move_id`, `step_m`, `step_s`.
+
+**`stays.csv`**: one row per stay (≥3 min within 50 m): `stay_id`, `session_id`, `start`, `end`, `duration_min`, `lat`, `lon` (median), `h3_r8`, `h3_r9`, `state`, `n_fixes`, `radius_m`, `weekday`, `hour`, `time_bucket`, `ended_by_offer` (an OFFER within the stay or up to 2 min after it), `offer_ts`.
+
+**`moves.csv`**: one row per move between stays: `move_id`, `session_id`, `start`, `end`, `duration_min`, `distance_m`, `mean_speed_kmh`, `from_lat/lon`, `to_lat/lon`, `from_h3_r8`, `to_h3_r8`, `state`, `n_fixes`.
+
+Public: `data/sample/track_summary.json` holds counts only (points, hours tracked, stays, moves, km ridden).

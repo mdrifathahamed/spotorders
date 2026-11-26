@@ -138,6 +138,7 @@ newer (`minSdk 26`). GitHub Actions builds and signs every release, so the app n
 | **Floating O / D buttons** | Chat-head buttons drawn over every app, including the Wolt Partner app. The button needed next is bright (**O** signal orange, **D** delivery blue), both fade when idle, a second tap within 4 s is ignored (winter gloves), and they snap to the screen edge. Drag onto the ✕ to hide them. |
 | **Notification** | **Got order**, **Free again** and **Show O/D** actions, so the app never has to be opened mid-shift. |
 | **Map tab** | H3 hexagons coloured by expected wait, from forest green (≤10 min) to crimson (>24 min). Solid cells come from my own orders and faint cells from the restaurant prior. Time-of-day chips, and a **Best spot now** card that picks the shortest expected wait within 3 km, counting the ride there at half weight. |
+| **Route recording** | A GPS fix every 15 s throughout the shift, whether I am riding or standing still, tagged *waiting* or *delivering*. A switch, **Record delivery trips too**, keeps the full route and exact drop-off points as well; it is off by default and the data go only to the private repository. |
 | **Logo** | A signal-orange map pin enclosing a white H3 hexagon and its centre point, on Nordic slate, with a monochrome version for the status bar. Colours are listed under [Design tokens](#design-tokens). |
 
 ## 5. Data sources
@@ -175,6 +176,7 @@ needs a billing account, its terms forbid showing Places data on a non-Google ma
 | Module | Purpose |
 |---|---|
 | `pipeline/osm_places.py` | Builds the restaurant layer from OpenStreetMap ([section 8](#8-the-restaurant-layer)) |
+| `pipeline/track.py` | Splits the GPS track into **stays** (≥3 min within 50 m) and **moves**, and links each stay to the order that ended it |
 | `pipeline/live.py` | Turns the app log into one row per order, with measured waits and the nearest venue (≤100 m) |
 | `pipeline/build_dataset.py` | Merges history and app rows and adds calendar, daylight, weather, H3 and restaurant-layer features |
 | `pipeline/weather.py` | Hourly Open-Meteo weather, with a private cache |
@@ -224,6 +226,9 @@ $$\text{prior} = \overline{\text{wait}}_b \times \operatorname{clip}\!\left(\sqr
   estimate towards what actually happens.
 - `data/sample/app_map.json` holds about 190 hexagons, with their boundaries, the expected wait and number of my orders for
   each time of day, open places, matched venues and cluster names. It is aggregated: no timestamps and no GPS points.
+- **Training data for the next model** come from the route: every stay of three minutes or more, with where it was, when,
+  how long it lasted and whether an order ended it, is in effect one trial of waiting in that patch. Stays that end without
+  an order (I gave up and moved) are censored waits, which a survival model can use rather than discard.
 - **Next:** gradient boosting (LightGBM or XGBoost) on the per-order feature table, once a few hundred measured waits from
   the app exist, validated by time (earlier weeks to train, later weeks to test) and compared against this smoothed baseline.
 
@@ -242,8 +247,10 @@ live. The project is therefore built so that none of that can leak.
 - **Two repositories.** Button presses, GPS, exact times and earnings stay in the private `spotorders-data`;
   `data/private/` is git-ignored here.
 - **Only aggregates are public:** H3 cells, times rounded to 15 minutes, no calendar dates, no exact coordinates, no pay.
-- **Customers' addresses stay out.** GPS logging pauses during every delivery (from O to D), the D press is stored at about
-  100 m precision, and logging resumes only after I have moved 200 m or 3 minutes have passed.
+- **Customers' addresses stay out by default.** GPS logging pauses during every delivery (from O to D), the D press is
+  stored at about 100 m precision, and logging resumes only after I have moved 200 m or 3 minutes have passed. The switch
+  *Record delivery trips too* lifts this for my own analysis; those tracks stay in the private repository, and nothing
+  derived from them is published beyond counts.
 - **Safety first.** The buttons are meant to be pressed while standing at the restaurant or the door, never while riding.
 
 ## 12. What the data say so far
@@ -357,12 +364,13 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | 2 | Logger app: GPS while waiting, floating O/D buttons, automatic upload | Done |
 | 3 | Map tab with H3 hexagons and *Best spot now* | Done |
 | 4 | Restaurant layer: opening hours, type weights, Wolt venues, clusters | Done |
-| 5 | **A/B test:** alternate shifts following the map and my usual spots → before/after chart | Next |
-| 6 | **Move-or-stay nudge:** vibrate and point the way when I have waited too long in a red hexagon | Next |
-| 7 | Pay per order: weekly screenshot upload, read in Actions and matched to O presses (€/h per spot) | Planned |
-| 8 | Weather-aware map (rain, snow and dry variants) using the next-hour forecast | Planned |
-| 9 | Gradient boosting on the per-order features with time-based validation | Planned |
-| 10 | Finnish public holidays in the opening-hours evaluation | Planned |
+| 5 | Route recording: stays and moves from a 15 s GPS track, as training data for the model | Done |
+| 6 | **A/B test:** alternate shifts following the map and my usual spots → before/after chart | Next |
+| 7 | **Move-or-stay nudge:** vibrate and point the way when I have waited too long in a red hexagon | Next |
+| 8 | Pay per order: weekly screenshot upload, read in Actions and matched to O presses (€/h per spot) | Planned |
+| 9 | Weather-aware map (rain, snow and dry variants) using the next-hour forecast | Planned |
+| 10 | Gradient boosting on the per-order and per-stay features, with time-based validation | Planned |
+| 11 | Finnish public holidays in the opening-hours evaluation | Planned |
 
 ## 19. Changelog
 
@@ -374,7 +382,8 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | `app v6` | 26 Nov 2026 | Map tab, Floating-Toucher style options, first logo |
 | `app v7` | 26 Nov 2026 | Privacy: no GPS during deliveries, D press rounded to ~100 m |
 | `app v8` | 26 Nov 2026 | Restaurant layer in the map: open places, matched venues, clusters |
-| next build | 26 Nov 2026 | Nordic redesign: new logo and launcher icon, colour palette across the app |
+| `app v9` | 26 Nov 2026 | Nordic redesign: new logo and launcher icon, colour palette across the app |
+| `app v10` | 26 Nov 2026 | Route recording every 15 s, moving or still; optional delivery-trip recording; stays and moves in the pipeline |
 
 ---
 

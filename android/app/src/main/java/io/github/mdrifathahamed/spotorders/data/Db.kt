@@ -11,6 +11,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /** One GPS fix from the foreground logger. */
@@ -23,6 +25,10 @@ data class Fix(
     val accuracyM: Float,
     val speedMps: Float?,
     val synced: Boolean = false,
+    /** Bearing of travel in degrees, if the phone reports one. */
+    val bearingDeg: Float? = null,
+    /** WAITING (free, between D and O) or DELIVERING (between O and D). */
+    val state: String = "WAITING",
 )
 
 /**
@@ -91,15 +97,24 @@ class Converters {
     @TypeConverter fun fromType(t: EventType) = t.name
 }
 
-@Database(entities = [Fix::class, ShiftEvent::class], version = 1, exportSchema = false)
+@Database(entities = [Fix::class, ShiftEvent::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): LogDao
 
     companion object {
         @Volatile private var instance: AppDb? = null
+
+        /** v2: fixes gain bearing and state (keeps every fix not yet uploaded). */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE fixes ADD COLUMN bearingDeg REAL")
+                db.execSQL("ALTER TABLE fixes ADD COLUMN state TEXT NOT NULL DEFAULT 'WAITING'")
+            }
+        }
         fun get(ctx: Context): AppDb = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(ctx.applicationContext, AppDb::class.java, "log.db")
+                .addMigrations(MIGRATION_1_2)
                 .build().also { instance = it }
         }
     }

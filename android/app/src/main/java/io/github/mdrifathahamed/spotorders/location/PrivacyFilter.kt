@@ -10,9 +10,12 @@ import kotlin.math.roundToLong
  *  - the D tap is stored rounded to ~100 m,
  *  - after D, logging resumes only once you are 200 m away or 3 minutes have passed.
  * The model only needs where you WAIT, so nothing useful is lost.
+ * All of this can be switched off in settings ("Record delivery trips too").
  */
 object PrivacyFilter {
     @Volatile var delivering = false
+    /** Mirrors AppSettings.recordDeliveryTrips; when true nothing is dropped or rounded. */
+    @Volatile var recordTrips = false
     @Volatile private var freeAt = 0L
     @Volatile private var freeLat = Double.NaN
     @Volatile private var freeLon = Double.NaN
@@ -35,6 +38,7 @@ object PrivacyFilter {
 
     /** True if this GPS fix must not be stored. */
     fun drop(lat: Double, lon: Double, tsMillis: Long): Boolean {
+        if (recordTrips) return false
         if (delivering) return true
         if (freeAt > 0 && tsMillis - freeAt < RESUME_AFTER_MS && !freeLat.isNaN() &&
             haversineM(lat, lon, freeLat, freeLon) < RESUME_AFTER_M) return true
@@ -42,5 +46,5 @@ object PrivacyFilter {
     }
 
     /** ~100 m precision (3 decimals is ~110 m north–south, ~55 m east–west in Helsinki). */
-    fun coarse(v: Double?): Double? = v?.let { (it * 1000).roundToLong() / 1000.0 }
+    fun coarse(v: Double?): Double? = if (recordTrips) v else v?.let { (it * 1000).roundToLong() / 1000.0 }
 }
