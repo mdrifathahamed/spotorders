@@ -435,6 +435,7 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | `app v10` | 26 Nov 2026 | Route recording every 15 s, moving or still; optional delivery-trip recording; stays and moves in the pipeline |
 | `app v11` | 26 Nov 2026 | History-screenshot upload with OCR in Actions; presses reconciled with the screenshot; stacked orders |
 | `app v13` | 26 Nov 2026 | **+** button for stacked orders: O, +, + means three orders and three D presses |
+| `app v14` | 26 Nov 2026 | Bayesian model: wait ranges, chance of an order within 10 min, *Stay here* advice; map data refresh themselves after every shift |
 
 ---
 
