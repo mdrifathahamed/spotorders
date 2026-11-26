@@ -154,9 +154,12 @@ fun MapScreen(owner: String, publicRepo: String) {
                     } ?: ""
                     Text("~${rec.waitMin.roundToInt()} min expected wait$dist", style = MaterialTheme.typography.bodyMedium)
                     val n = rec.cell.n[rec.bucket] ?: 0
+                    val openTxt = rec.cell.open[rec.bucket]?.let { "~${it.roundToInt()} of ${rec.cell.foodPlaces} food places open" }
+                        ?: "${rec.cell.foodPlaces} food places"
+                    val clusterTxt = rec.cell.cluster?.let { " · cluster: $it (${rec.cell.clusterPlaces})" } ?: ""
                     Text(
-                        if (n > 0) "Based on $n of my orders here at this time + ${rec.cell.foodPlaces} food places nearby"
-                        else "No orders of mine here at this time yet: estimated from ${rec.cell.foodPlaces} food places nearby",
+                        (if (n > 0) "Based on $n of my orders here at this time · $openTxt"
+                         else "No orders of mine here at this time yet: estimated from $openTxt") + clusterTxt,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -190,7 +193,7 @@ fun MapScreen(owner: String, publicRepo: String) {
             }
         }
         Text(
-            "Solid = based on my orders · faint = estimate from restaurant density. Tap a hexagon for details.",
+            "Solid = based on my orders · faint = estimate from food places open at this time. Tap a hexagon for details.",
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
         )
@@ -211,9 +214,14 @@ private fun drawHexes(mv: MapView, map: AppMap?, bucket: String, rec: Recommenda
             outlinePaint.strokeWidth = if (rec?.cell?.h3 == c.h3) 6f else 2f
             if (rec?.cell?.h3 == c.h3) outlinePaint.color = Color.BLACK
             title = c.topVenue ?: "Hexagon"
+            val openLine = c.open[bucket]?.let {
+                "Open at this time: ~${it.roundToInt()} of ${c.foodPlaces} food places (${c.hoursKnown} with known hours)"
+            } ?: "Food places: ${c.foodPlaces}"
             snippet = "~${w.roundToInt()} min expected wait (${BUCKET_LABELS[bucket]})<br/>" +
                 "My orders here at this time: $n · all times: ${c.myOrders}<br/>" +
-                "Food places nearby: ${c.foodPlaces}"
+                "$openLine<br/>" +
+                "Places I've picked up from: ${c.woltVenues}" +
+                (c.cluster?.let { "<br/>Restaurant cluster: $it (${c.clusterPlaces} places)" } ?: "")
         }
         mv.overlays.add(poly)
     }

@@ -3,3 +3,5 @@ numpy>=1.24
 h3>=4.0
 matplotlib>=3.7
 requests>=2.31
+opening-hours-py>=1.1
+scikit-learn>=1.3

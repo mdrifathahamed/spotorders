@@ -25,6 +25,8 @@ import pandas as pd
 
 from .geo import h3_cell, simulate_courier_position
 from .live import build_live
+from .osm_places import load_layer
+from .geo import haversine_m
 from .weather import WMO, load_weather, weather_class
 
 
@@ -157,6 +159,31 @@ def add_features(df: pd.DataFrame, wx: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_osm_layer(df: pd.DataFrame) -> pd.DataFrame:
+    """Second layer: open food places around the courier at that weekday and hour, and the nearest cluster."""
+    tab, cl, _ = load_layer()
+    if tab is None:
+        return df
+    t = tab.rename(columns={"n_total": "food_places_hex", "open_est": "food_open_est", "food_score": "food_score",
+                            "n_wolt_venues": "wolt_venues_hex"})[
+        ["h3_r8", "weekday", "hour", "food_places_hex", "food_open_est", "food_score", "wolt_venues_hex"]]
+    df = df.merge(t, how="left", on=["h3_r8", "weekday", "hour"])
+    for c in ["food_places_hex", "food_open_est", "food_score", "wolt_venues_hex"]:
+        df[c] = df[c].where(df.h3_r8.isna(), df[c].fillna(0))   # hexagon with no OSM food places -> 0
+    if cl is not None and len(cl):
+        def nearest(lat, lon):
+            if pd.isna(lat):
+                return (np.nan, None, np.nan)
+            d = [haversine_m(lat, lon, a, b) for a, b in zip(cl.lat, cl.lon)]
+            i = int(np.argmin(d))
+            return (round(d[i]), cl.label.iat[i], int(cl.n_places.iat[i]))
+        near = [nearest(a, b) for a, b in zip(df.courier_lat, df.courier_lon)]
+        df["nearest_cluster_m"] = [x[0] for x in near]
+        df["nearest_cluster"] = [x[1] for x in near]
+        df["nearest_cluster_places"] = [x[2] for x in near]
+    return df
+
+
 COLS = ["order_id", "source", "shift_id", "shift_date", "order_idx_in_shift", "ts", "date", "time",
         "weekday", "weekday_name", "is_weekend", "is_fri_sat_evening", "hour", "minute_of_day",
         "hour_sin", "hour_cos", "time_bucket", "week_index", "sun_elevation_deg", "is_dark",
@@ -166,7 +193,9 @@ COLS = ["order_id", "source", "shift_id", "shift_date", "order_idx_in_shift", "t
         "distance_km", "gap_since_prev_min", "est_task_min", "wait_min", "wait_is_estimated",
         "temp_c", "apparent_temp_c", "precip_mm", "rain_mm", "snowfall_cm", "precip_prev2h_mm",
         "wind_kmh", "rel_humidity", "cloud_cover", "weather_code", "weather_label",
-        "weather_class", "is_precip", "pay_eur", "tip_eur", "total_eur", "eur_per_km"]
+        "weather_class", "is_precip",
+        "food_places_hex", "food_open_est", "food_score", "wolt_venues_hex",
+        "nearest_cluster", "nearest_cluster_m", "nearest_cluster_places", "pay_eur", "tip_eur", "total_eur", "eur_per_km"]
 
 
 def build() -> pd.DataFrame:
@@ -177,7 +206,7 @@ def build() -> pd.DataFrame:
         parts.append(live)
     core = pd.concat(parts, ignore_index=True)
     wx = load_weather(ROOT, core.ts)
-    df = add_features(core, wx).reindex(columns=COLS)
+    df = add_osm_layer(add_features(core, wx)).reindex(columns=COLS)
     for c in ["courier_lat", "courier_lon", "venue_lat", "venue_lon"]:
         df[c] = df[c].round(6)
     for c in ["courier_offset_m", "courier_bearing_deg", "sun_elevation_deg", "hour_sin", "hour_cos",

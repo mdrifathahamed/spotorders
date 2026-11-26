@@ -39,6 +39,7 @@ jobs:
 
       - name: Rebuild dataset, ranking, figures and the app map
         run: |
+          python -m pipeline.osm_places        # food places + opening hours + clusters (re-downloaded monthly)
           python -m pipeline.build_dataset
           python -m pipeline.baseline
           python -m pipeline.figures

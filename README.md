@@ -54,7 +54,24 @@ where I wait the least, by hour, weekday and weather.
 4. **The app's Map tab** downloads the result (`data/sample/app_map.json`) and colours H3 hexagons over an
    OpenStreetMap base map by expected wait for the current time of day, green to red. A card names the best
    spot within 3 km, counting the ride there at half weight. Hexagons where I have never waited get an
-   estimate from OpenStreetMap restaurant density, so the map is useful from day one and learns from every shift.
+   estimate from the restaurant layer below, so the map is useful from day one and learns from every shift.
+
+### The restaurant layer (free, from OpenStreetMap)
+
+My own waits are the main signal. Where I have none yet, the estimate comes from a second layer built from
+OpenStreetMap (`pipeline/osm_places.py`, refreshed monthly), with four criteria:
+
+| Criterion | How |
+|---|---|
+| **Open at that hour** | each place's `opening_hours` tag is evaluated for every weekday and hour; places without hours count with the city-wide share that is open at that hour |
+| **Type weight** | fast food 1.5, food court 2.0, supermarket 1.5, restaurant 1.2, convenience 1.0, café 0.6, bakery 0.5 |
+| **Proven Wolt venues** | places within 60 m of a restaurant I have picked up from count x3, since they are certainly on Wolt |
+| **Clusters** | DBSCAN (120 m, at least 5 places) finds food courts and busy streets, e.g. the Redi food court; distance to the nearest cluster becomes a model feature |
+
+These give a *food score* per hexagon, weekday and hour, which sets the prior wait: a hexagon full of cafés that
+are closed at 23:00 stops looking good at 23:00. The same numbers are added to every order in the dataset
+(`food_open_est`, `food_score`, `nearest_cluster_m`) for the machine-learning step. Map data © OpenStreetMap
+contributors (ODbL).
 
 ## Privacy by design
 
@@ -99,14 +116,14 @@ I'll add a before/after chart here once the app has logged enough shifts.
 | 1 | Dataset from screenshots, weather join, first heatmaps | done |
 | 2 | Android logger: GPS, floating O/D buttons, automatic upload to GitHub | done, in daily use |
 | 3 | Map tab: H3 hexagons coloured by expected wait, best spot now | done |
-| 4 | Model: smoothed statistics with an OpenStreetMap density prior (now) → gradient boosting with weather | smoothed version live in `pipeline/app_map.py` |
+| 4 | Model: smoothed statistics with an OpenStreetMap prior (open hours, type weights, clusters) → gradient boosting with weather | smoothed version live in `pipeline/app_map.py` |
 
 ## Repo layout
 
 | Path | What |
 |---|---|
 | `android/` | Kotlin, Jetpack Compose, Room, WorkManager, fused location |
-| `pipeline/` | Python: `build_dataset`, `live` (app log → orders), `weather`, `geo`, `baseline`, `app_map`, `figures` |
+| `pipeline/` | Python: `build_dataset`, `live` (app log → orders), `weather`, `osm_places` (restaurant layer), `geo`, `baseline`, `app_map`, `figures` |
 | `data/sample/` | public, privacy-safe tables updated by the workflow |
 | `data/reference/` | restaurant coordinates and the weather hours for the screenshot history |
 | `docs/` | [phone setup](docs/INSTALL.md), [data dictionary](docs/data_dictionary.md) |
@@ -116,6 +133,7 @@ I'll add a before/after chart here once the app has logged enough shifts.
 
 ```bash
 pip install -r requirements.txt
+python -m pipeline.osm_places      # restaurant layer from OpenStreetMap
 python -m pipeline.build_dataset   # needs data/private (the private data repo)
 python -m pipeline.baseline
 python -m pipeline.figures

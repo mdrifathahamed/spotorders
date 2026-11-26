@@ -52,6 +52,11 @@ One row = one task offer accepted in the courier app. A task can contain several
 | weather_code, weather_label | int, str | WMO code and label |
 | weather_class | str | dry / wet / snow / cold_dry |
 | is_precip | bool | precip_mm > 0 |
+| food_places_hex | int | OpenStreetMap food places in the courier's H3 res-8 hexagon |
+| food_open_est | float | expected number of them open at that weekday and hour (opening_hours; untagged places at the city-wide open share) |
+| food_score | float | open places weighted by type (fast food 1.5 … bakery 0.5) and x3 for venues I have picked up from |
+| wolt_venues_hex | int | OSM places in the hexagon matched (≤60 m) to venues I have picked up from |
+| nearest_cluster, nearest_cluster_m, nearest_cluster_places | str, float, int | nearest restaurant cluster (DBSCAN 120 m, ≥5 places): name, distance from the courier, size |
 | pay_eur, tip_eur, total_eur, eur_per_km | float | earnings · *private* |
 
 ## hex_training_table.csv
@@ -63,3 +68,9 @@ Grouped by `h3_r8 × time_bucket × day_type × weather_class`: `n_orders`, `n_s
 
 Per `h3_r8 × time_bucket`: `smoothed_wait_min = (sum_wait + 4·prior) / (n + 4)`, where the prior is the
 average wait in that time bucket. Lower is better. `rank_in_bucket` 1 = best.
+
+## Restaurant layer (data/reference, OpenStreetMap © contributors, ODbL)
+
+- `osm_food_places.csv`: one row per place, with `kind`, `opening_hours`, `hours_known`, `wolt_venue`, `weight`, `cluster_id`, H3 cells
+- `osm_open_hex.csv`: `h3_r8 × weekday × hour` with `n_total, n_hours_known, n_wolt_venues, n_open_known, open_est, food_score`
+- `osm_clusters.csv`: cluster label, size, matched Wolt venues, summed weight, centre

@@ -25,6 +25,12 @@ data class HexCell(
     val topVenue: String?,
     val wait: Map<String, Double>,
     val n: Map<String, Int>,
+    /** Expected number of food places open in each time bucket (OpenStreetMap opening hours). */
+    val open: Map<String, Double> = emptyMap(),
+    val hoursKnown: Int = 0,
+    val woltVenues: Int = 0,
+    val cluster: String? = null,
+    val clusterPlaces: Int = 0,
 )
 
 data class AppMap(val generated: String, val buckets: List<String>, val totalOrders: Int, val cells: List<HexCell>)
@@ -62,7 +68,9 @@ fun haversineM(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
  * (you can still get an order on the way). Only hexagons within 3 km with real data or several food places.
  */
 fun recommend(map: AppMap, bucket: String, lat: Double?, lon: Double?): Recommendation? {
-    val candidates = map.cells.filter { (it.n[bucket] ?: 0) > 0 || it.foodPlaces >= 3 }
+    val candidates = map.cells.filter {
+        (it.n[bucket] ?: 0) > 0 || (it.open[bucket] ?: it.foodPlaces.toDouble()) >= 3.0
+    }
     return candidates.mapNotNull { c ->
         val w = c.wait[bucket] ?: return@mapNotNull null
         if (lat == null || lon == null) return@mapNotNull Triple(c, w, w)
@@ -124,6 +132,13 @@ object MapRepository {
                 topVenue = if (c.isNull("top_venue")) null else c.optString("top_venue"),
                 wait = buckets.associateWith { w.optDouble(it, Double.NaN) }.filterValues { !it.isNaN() },
                 n = buckets.associateWith { n.optInt(it, 0) },
+                open = c.optJSONObject("open")?.let { o ->
+                    buckets.associateWith { o.optDouble(it, Double.NaN) }.filterValues { !it.isNaN() }
+                } ?: emptyMap(),
+                hoursKnown = c.optInt("hours_known", 0),
+                woltVenues = c.optInt("wolt_venues", 0),
+                cluster = if (c.isNull("cluster")) null else c.optString("cluster").ifBlank { null },
+                clusterPlaces = c.optInt("cluster_places", 0),
             )
         }
         return AppMap(js.optString("generated"), buckets, js.optInt("total_orders"), cells)
