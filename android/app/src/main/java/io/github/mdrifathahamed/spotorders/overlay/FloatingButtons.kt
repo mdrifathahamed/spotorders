@@ -58,6 +58,7 @@ object FloatingButtons {
     private const val ORANGE = 0xFFE85D2A.toInt()
     private const val BLUE = 0xFF2B6CB0.toInt()
     private const val DIM = 0x9918222F.toInt()
+    private const val ORANGE_SOFT = 0x99E85D2A.toInt()
     private const val GREEN = 0xFF2F855A.toInt()
     private const val DEBOUNCE_MS = 4_000L   // ignore accidental double taps of the same button
 
@@ -175,7 +176,9 @@ object FloatingButtons {
         val o = btnO ?: return
         val d = btnD ?: return
         val waitingForOrder = lastType != EventType.OFFER
-        o.background = circle(if (waitingForOrder) ORANGE else DIM, 2, o.context)
+        // While delivering, O stays usable as "O+": another (stacked) order was added.
+        o.text = if (waitingForOrder) "O" else "O+"
+        o.background = circle(if (waitingForOrder) ORANGE else ORANGE_SOFT, 2, o.context)
         d.background = circle(if (!waitingForOrder) BLUE else DIM, 2, d.context)
     }
 

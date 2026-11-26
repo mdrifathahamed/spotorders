@@ -37,9 +37,13 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      - name: Install Tesseract OCR (reads uploaded history screenshots)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr > /dev/null
+
       - name: Rebuild dataset, ranking, figures and the app map
         run: |
           python -m pipeline.osm_places        # food places + opening hours + clusters (re-downloaded monthly)
+          python -m pipeline.ocr_screenshots   # new history screenshots -> orders_raw.csv
           python -m pipeline.track             # GPS track -> stays (standing still) and moves (riding)
           python -m pipeline.build_dataset
           python -m pipeline.baseline

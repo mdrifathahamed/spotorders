@@ -43,16 +43,23 @@ class GitHubClient(private val token: String, private val owner: String) {
     }
 
     fun putFile(repo: String, path: String, text: String, sha: String?, message: String) {
+        putBytes(repo, path, text.toByteArray(Charsets.UTF_8), sha, message)
+    }
+
+    /** Creates or replaces a file. Returns false if the file exists and no sha was given (HTTP 422). */
+    fun putBytes(repo: String, path: String, bytes: ByteArray, sha: String?, message: String): Boolean {
         val c = open("/repos/$owner/$repo/contents/$path", "PUT")
         try {
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json")
             val body = JSONObject()
                 .put("message", message)
-                .put("content", Base64.encodeToString(text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP))
+                .put("content", Base64.encodeToString(bytes, Base64.NO_WRAP))
             if (sha != null) body.put("sha", sha)
             c.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            if (c.responseCode == 422 && sha == null) return false
             if (c.responseCode !in 200..201) throw IOException("PUT $path: ${c.errorText()}")
+            return true
         } finally {
             c.disconnect()
         }

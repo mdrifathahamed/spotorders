@@ -25,6 +25,7 @@ import pandas as pd
 
 from .geo import h3_cell, simulate_courier_position
 from .live import build_live
+from .reconcile import reconcile
 from .osm_places import load_layer
 from .geo import haversine_m
 from .weather import WMO, load_weather, weather_class
@@ -190,7 +191,7 @@ COLS = ["order_id", "source", "shift_id", "shift_date", "order_idx_in_shift", "t
         "venue", "pickup_venues", "n_pickups", "n_deliveries", "anchor_venue", "venue_area",
         "geocode_quality", "venue_lat", "venue_lon", "courier_lat", "courier_lon",
         "courier_offset_m", "courier_bearing_deg", "gps_accuracy_m", "h3_r8", "h3_r9",
-        "distance_km", "gap_since_prev_min", "est_task_min", "wait_min", "wait_is_estimated",
+        "distance_km", "gap_since_prev_min", "est_task_min", "wait_min", "wait_is_estimated", "chained", "press_lag_min",
         "temp_c", "apparent_temp_c", "precip_mm", "rain_mm", "snowfall_cm", "precip_prev2h_mm",
         "wind_kmh", "rel_humidity", "cloud_cover", "weather_code", "weather_label",
         "weather_class", "is_precip",
@@ -200,10 +201,16 @@ COLS = ["order_id", "source", "shift_id", "shift_date", "order_idx_in_shift", "t
 
 def build() -> pd.DataFrame:
     venues = pd.read_csv(ROOT / "data/reference/venues.csv").set_index("venue")
-    parts = [build_history(venues)]
+    hist, days, report = reconcile(build_history(venues), ROOT / "data/private")
+    if len(report):
+        (ROOT / "data/private/derived").mkdir(parents=True, exist_ok=True)
+        report.to_csv(ROOT / "data/private/derived/press_check.csv", index=False)
+    parts = [hist]
     live = build_live(ROOT / "data/private", venues)
-    if not live.empty:
-        parts.append(live)
+    if not live.empty:                    # days that also have a screenshot are merged above
+        live = live[~live.ts.dt.date.isin(days)]
+        if not live.empty:
+            parts.append(live)
     core = pd.concat(parts, ignore_index=True)
     wx = load_weather(ROOT, core.ts)
     df = add_osm_layer(add_features(core, wx)).reindex(columns=COLS)

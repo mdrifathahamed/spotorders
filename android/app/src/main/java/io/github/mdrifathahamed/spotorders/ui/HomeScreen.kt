@@ -34,7 +34,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
 import kotlin.math.roundToInt
-import androidx.compose.foundation.layout.Box
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import io.github.mdrifathahamed.spotorders.sync.ScreenshotUploader
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Switch
 import androidx.compose.ui.Alignment
@@ -120,6 +126,7 @@ fun HomeScreen(
         )
         Spacer(Modifier.height(4.dp))
         OutlinedButton(onSyncNow, Modifier.fillMaxWidth(), enabled = status.configured) { Text("Upload now") }
+        ScreenshotUploadButton()
         OutlinedButton(onExport, Modifier.fillMaxWidth()) { Text("Export CSV") }
         TextButton({ showSettings = !showSettings }) { Text(if (showSettings) "Hide GitHub settings" else "GitHub settings") }
 
@@ -206,4 +213,32 @@ private fun RouteRecordingControls() {
             })
         }
     }
+}
+
+
+/**
+ * End of shift: pick the courier-history screenshot(s) of the day. They are read with OCR in
+ * GitHub Actions, which fixes late or forgotten O presses and records stacked orders.
+ */
+@Composable
+private fun ScreenshotUploadButton() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        busy = true
+        scope.launch {
+            val msg = ScreenshotUploader.upload(ctx, uris)
+            busy = false
+            Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
+        }
+    }
+    Button(
+        { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+        Modifier.fillMaxWidth(), enabled = !busy,
+    ) { Text(if (busy) "Uploading…" else "Add history screenshot(s)") }
+    Text("After the shift, screenshot the day in the courier history and add it here: " +
+         "it corrects late or forgotten O presses and records stacked orders.",
+         style = MaterialTheme.typography.bodySmall)
 }
