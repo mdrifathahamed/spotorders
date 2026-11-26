@@ -1,0 +1,36 @@
+time_bucket,rank_in_bucket,h3_r8,hex_lat,hex_lon,top_venue,n,raw_mean_wait_min,smoothed_wait_min,prior_wait
+afternoon,1.0,881126d00bfffff,60.21,24.97,K-Market Toukola,2,6.43,16.39,21.37
+afternoon,2.0,881126d15bfffff,60.18,24.98,Putte's Bar & Pizza Sompasaari,1,0.47,17.19,21.37
+afternoon,3.0,881126d06dfffff,60.18,24.95,McDonald's Helsinki Hakaniemi,5,16.56,18.7,21.37
+afternoon,4.0,881126d061fffff,60.19,24.96,Dust & Fry Sörnäinen,2,16.7,19.81,21.37
+afternoon,5.0,881126d067fffff,60.19,24.97,Pretty Boy Redi,2,19.9,20.88,21.37
+afternoon,6.0,881126d00dfffff,60.2,24.97,K-Supermarket Arabia,2,21.8,21.51,21.37
+afternoon,7.0,881126d06bfffff,60.19,24.96,Pizza Express Vallila,2,39.91,27.55,21.37
+afternoon,8.0,881126d04dfffff,60.2,24.93,Hesburger Helsinki Pasila Tripla,1,70.49,31.19,21.37
+dinner,1.0,881126d15bfffff,60.18,24.98,K-Market Nihti,3,4.13,12.83,19.35
+dinner,2.0,881126d06bfffff,60.19,24.96,Power Pizza,4,7.27,13.31,19.35
+dinner,3.0,881126d009fffff,60.21,24.96,Pizzeria Parmesan Kumpula,3,5.5,13.41,19.35
+dinner,4.0,881126d00dfffff,60.2,24.97,K-Supermarket Arabia,12,16.06,16.89,19.35
+dinner,5.0,881126d00bfffff,60.21,24.97,Herkku-Haarukka,2,16.48,18.39,19.35
+dinner,6.0,881126d003fffff,60.21,24.99,K-Market Toukola,1,27.94,21.07,19.35
+dinner,7.0,881126d06dfffff,60.18,24.95,Hesburger Helsinki Hakaniemi,17,21.65,21.21,19.35
+dinner,8.0,881126d061fffff,60.19,24.96,McDonald's Helsinki Teollisuuskatu,7,22.43,21.31,19.35
+dinner,9.0,881126d067fffff,60.19,24.97,KFC Redi,19,22.53,21.98,19.35
+dinner,10.0,881126d001fffff,60.21,24.98,Swagatam,2,44.76,27.82,19.35
+late,1.0,881126d067fffff,60.19,24.97,Taco Bell Redi,5,16.53,18.45,20.86
+late,2.0,881126d333fffff,60.17,24.96,K-Market Liisankatu,1,9.16,18.52,20.86
+late,3.0,881126d15bfffff,60.18,24.98,K-Market Nihti,1,9.24,18.53,20.86
+late,4.0,881126d04dfffff,60.2,24.93,Hesburger Helsinki Pasila Tripla,1,16.0,19.88,20.86
+late,5.0,881126d06dfffff,60.18,24.95,McDonald's Helsinki Hakaniemi,5,19.97,20.36,20.86
+late,6.0,881126d061fffff,60.19,24.96,Mojo Street Food,6,21.07,20.99,20.86
+late,7.0,881126d06bfffff,60.19,24.96,King Kebab Vallila,4,34.08,27.47,20.86
+lunch,1.0,881126d331fffff,60.17,24.95,Pizza Hut Citykäytävä,3,5.69,11.31,15.53
+lunch,2.0,881126d00dfffff,60.2,24.97,K-Supermarket Arabia,5,9.89,12.4,15.53
+lunch,3.0,881126d00bfffff,60.21,24.97,Krung Thep Thai Bistro Arabia,1,0.0,12.43,15.53
+lunch,4.0,881126d339fffff,60.17,24.93,Eat Poke Kamppi,1,2.3,12.89,15.53
+lunch,5.0,881126d06dfffff,60.18,24.95,Lie Mi Kallio,12,13.52,14.02,15.53
+lunch,6.0,881126d069fffff,60.19,24.95,The Frogg,1,9.03,14.23,15.53
+lunch,7.0,881126d05bfffff,60.23,24.95,Krung Thep Thai Bistro Oulunkylä,1,9.31,14.29,15.53
+lunch,8.0,881126d061fffff,60.19,24.96,Picnic Sörnäinen,3,17.47,16.36,15.53
+lunch,9.0,881126d067fffff,60.19,24.97,KFC Redi,4,44.93,30.23,15.53
+morning,1.0,881126d00dfffff,60.2,24.97,Pakettiautomaatti Lidl Arabia,1,15.63,15.63,15.63

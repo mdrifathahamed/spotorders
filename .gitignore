@@ -1,0 +1,19 @@
+# private data: exact times, earnings, raw GPS
+data/private/
+*.gpx
+*.geojson.private
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+.DS_Store
