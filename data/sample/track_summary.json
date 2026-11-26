@@ -1,9 +1,9 @@
 {
-  "points": 65,
-  "hours_tracked": 2.0,
-  "stays": 4,
-  "waiting_stays": 4,
-  "stays_ended_by_offer": 0,
+  "points": 80,
+  "hours_tracked": 2.6,
+  "stays": 6,
+  "waiting_stays": 6,
+  "stays_ended_by_offer": 1,
   "moves": 2,
-  "km_ridden": 3.1
+  "km_ridden": 3.7
 }
