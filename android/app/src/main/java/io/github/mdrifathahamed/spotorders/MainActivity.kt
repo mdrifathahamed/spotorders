@@ -96,21 +96,21 @@ class MainActivity : ComponentActivity() {
                         settings.owner = c.owner; settings.dataRepo = c.dataRepo
                         settings.publicRepo = c.publicRepo; settings.token = c.token
                         refresh.intValue++
-                        SyncWorker.enqueue(this)
+                        SyncWorker.enqueue(this@MainActivity)
                     },
-                    onSyncNow = { SyncWorker.enqueue(this); refresh.intValue++ },
+                    onSyncNow = { SyncWorker.enqueue(this@MainActivity); refresh.intValue++ },
                     onExport = { lifecycleScope.launch { CsvExporter.export(this@MainActivity) } },
                     overlayAllowed = overlayAllowed.value,
                     onAllowOverlay = {
                         startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                             Uri.parse("package:$packageName")))
                     },
-                    onShowButtons = { FloatingButtons.show(this) },
+                    onShowButtons = { FloatingButtons.show(this@MainActivity) },
                     floatingStyle = floatingStyle.value,
                     onStyleChange = { st ->
-                        st.save(this)
+                        st.save(this@MainActivity)
                         floatingStyle.value = st
-                        FloatingButtons.restyle(this)
+                        FloatingButtons.restyle(this@MainActivity)
                     },
                 )
                 }
