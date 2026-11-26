@@ -64,7 +64,9 @@ My GPS track shows where I live and when I work, so I treat it as private from t
   `data/private/` is git-ignored here.
 - **What is public:** counts and waiting times per hexagon (H3, about 170 m to 900 m across), times rounded
   to 15 minutes, no calendar dates, no exact coordinates, no earnings.
-- **Drop-off locations are never recorded**, so nothing about customers is ever stored.
+- **Customers' addresses stay out of the data.** No GPS is logged during a delivery (between O and D), the
+  D tap is stored only to about 100 m, and logging resumes once I'm 200 m away or 3 minutes later. The model only
+  needs where I *wait*.
 - The GitHub token on the phone is encrypted with the Android Keystore and only sent to api.github.com.
 - One-tap input only. Buttons are pressed at the restaurant or the customer's door, never while riding.
 

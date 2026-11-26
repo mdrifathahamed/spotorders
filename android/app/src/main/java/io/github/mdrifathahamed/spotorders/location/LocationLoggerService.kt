@@ -51,6 +51,7 @@ class LocationLoggerService : Service() {
         override fun onLocationResult(result: LocationResult) {
             val dao = AppDb.get(this@LocationLoggerService).dao()
             result.locations.forEach { loc ->
+                if (PrivacyFilter.drop(loc.latitude, loc.longitude, loc.time)) return@forEach
                 scope.launch {
                     dao.insertFix(Fix(tsMillis = loc.time, lat = loc.latitude, lon = loc.longitude,
                         accuracyM = loc.accuracy, speedMps = if (loc.hasSpeed()) loc.speed else null))
@@ -68,6 +69,11 @@ class LocationLoggerService : Service() {
         FloatingButtons.show(this)          // O / D bubble over every app (if allowed)
         if (started) return START_STICKY   // e.g. "Show O/D" tapped: buttons shown above, nothing else to redo
         started = true
+        // restore "delivering?" after the app was restarted mid-order
+        scope.launch {
+            val last = AppDb.get(this@LocationLoggerService).dao().lastEventNow()
+            if (last?.type == EventType.OFFER) PrivacyFilter.delivering = true
+        }
         val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15_000L)
             .setMinUpdateDistanceMeters(20f)
             .build()
