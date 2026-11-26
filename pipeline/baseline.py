@@ -15,16 +15,21 @@ from pathlib import Path
 import h3
 import pandas as pd
 
+
+def top_name(s):
+    vc = s.replace("", None).dropna().value_counts()
+    return vc.index[0] if len(vc) else "(no known venue)"
+
 ROOT = Path(__file__).resolve().parents[1]
 K = 4  # pseudo-observations; raise it when data are noisy
 
 
 def rank_spots(df: pd.DataFrame, k: int = K) -> pd.DataFrame:
-    d = df.dropna(subset=["h3_r8", "est_wait_min"])
-    prior = d.groupby("time_bucket").est_wait_min.mean().rename("prior_wait")
+    d = df.dropna(subset=["h3_r8", "wait_min"])
+    prior = d.groupby("time_bucket").wait_min.mean().rename("prior_wait")
     g = (d.groupby(["h3_r8", "time_bucket"])
-           .agg(n=("est_wait_min", "size"), sum_wait=("est_wait_min", "sum"),
-                top_venue=("anchor_venue", lambda s: s.value_counts().index[0]))
+           .agg(n=("wait_min", "size"), sum_wait=("wait_min", "sum"),
+                top_venue=("anchor_venue", top_name))
            .reset_index().join(prior, on="time_bucket"))
     g["smoothed_wait_min"] = (g.sum_wait + k * g.prior_wait) / (g.n + k)
     g["raw_mean_wait_min"] = g.sum_wait / g.n

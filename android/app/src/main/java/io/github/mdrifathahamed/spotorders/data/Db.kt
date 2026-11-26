@@ -9,6 +9,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import kotlinx.coroutines.flow.Flow
 
 /** One GPS fix from the foreground logger. */
@@ -20,6 +22,7 @@ data class Fix(
     val lon: Double,
     val accuracyM: Float,
     val speedMps: Float?,
+    val synced: Boolean = false,
 )
 
 /**
@@ -35,6 +38,9 @@ data class ShiftEvent(
     val type: EventType,
     val lat: Double?,
     val lon: Double?,
+    val accuracyM: Float?,
+    val fixAgeS: Long?,
+    val synced: Boolean = false,
 )
 
 @Dao
@@ -44,6 +50,9 @@ interface LogDao {
 
     @Query("SELECT * FROM events ORDER BY tsMillis DESC LIMIT 1")
     fun lastEvent(): Flow<ShiftEvent?>
+
+    @Query("SELECT * FROM events ORDER BY tsMillis DESC LIMIT 1")
+    suspend fun lastEventNow(): ShiftEvent?
 
     @Query("SELECT * FROM events ORDER BY tsMillis")
     suspend fun allEvents(): List<ShiftEvent>
@@ -56,15 +65,34 @@ interface LogDao {
 
     @Query("SELECT COUNT(*) FROM fixes")
     fun fixCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM events WHERE type = 'OFFER' AND tsMillis >= :sinceMillis")
+    fun offersSince(sinceMillis: Long): Flow<Int>
+
+    // --- upload queue
+    @Query("SELECT * FROM events WHERE synced = 0 ORDER BY tsMillis")
+    suspend fun unsyncedEvents(): List<ShiftEvent>
+
+    @Query("UPDATE events SET synced = 1 WHERE id IN (:ids)")
+    suspend fun markEventsSynced(ids: List<Long>)
+
+    @Query("SELECT * FROM fixes WHERE synced = 0 ORDER BY tsMillis LIMIT :limit")
+    suspend fun unsyncedFixes(limit: Int): List<Fix>
+
+    @Query("UPDATE fixes SET synced = 1 WHERE id IN (:ids)")
+    suspend fun markFixesSynced(ids: List<Long>)
+
+    @Query("SELECT COUNT(*) FROM events WHERE synced = 0")
+    fun pendingEvents(): Flow<Int>
 }
 
 class Converters {
-    @androidx.room.TypeConverter fun toType(s: String) = EventType.valueOf(s)
-    @androidx.room.TypeConverter fun fromType(t: EventType) = t.name
+    @TypeConverter fun toType(s: String) = EventType.valueOf(s)
+    @TypeConverter fun fromType(t: EventType) = t.name
 }
 
 @Database(entities = [Fix::class, ShiftEvent::class], version = 1, exportSchema = false)
-@androidx.room.TypeConverters(Converters::class)
+@TypeConverters(Converters::class)
 abstract class AppDb : RoomDatabase() {
     abstract fun dao(): LogDao
 

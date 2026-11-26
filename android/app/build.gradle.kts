@@ -15,8 +15,22 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+    // One fixed signing key (committed, debug-grade) so every APK built by GitHub Actions
+    // installs as an update over the previous one without wiping the phone's local data.
+    signingConfigs {
+        create("shared") {
+            storeFile = rootProject.file("keystore/spotorders.jks")
+            storePassword = "spotorders"
+            keyAlias = "spotorders"
+            keyPassword = "spotorders"
+        }
+    }
     buildTypes {
-        release { isMinifyEnabled = false }
+        debug { signingConfig = signingConfigs.getByName("shared") }
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -38,6 +52,10 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

@@ -1,4 +1,4 @@
-h3_r8,time_bucket,day_type,weather_class,n_orders,n_shifts,median_est_wait_min,mean_distance_km,top_venue,hex_lat,hex_lon
+h3_r8,time_bucket,day_type,weather_class,n_orders,n_shifts,median_wait_min,mean_distance_km,top_venue,hex_lat,hex_lon
 881126d067fffff,dinner,weekday,dry,21,12,24.57,1.64,Taco Bell Redi,60.185,24.974
 881126d06dfffff,lunch,weekday,dry,11,7,12.54,1.837,SOUP+MORE Hakaniemi,60.181,24.952
 881126d06dfffff,dinner,weekday,dry,8,6,20.79,1.749,Hesburger Helsinki Hakaniemi,60.181,24.952

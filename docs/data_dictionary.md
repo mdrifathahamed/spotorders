@@ -3,11 +3,18 @@
 One row = one task offer accepted in the courier app. A task can contain several pickups
 (`n_pickups`) and several deliveries (`n_deliveries`).
 
+## App log (private data repo)
+
+`live/events.csv`: `ts, type, lat, lon, accuracy_m, fix_age_s`, one line per button press
+(`SHIFT_START`, `OFFER`, `FREE`, `SHIFT_END`). `live/fixes/YYYY-MM-DD.csv`: GPS track,
+`ts, lat, lon, accuracy_m, speed_mps`.
+
 ## orders_enriched.csv (private) / orders_public.csv (public)
 
 | column | type | meaning |
 |---|---|---|
 | order_id | str | running id in time order |
+| source | str | `history_screenshots` (transcribed) or `app_log` (button presses in the app) |
 | shift_id | str | new shift when the gap to the previous task is > 90 min |
 | shift_date | date | date the shift started (a 00:10 task belongs to the previous evening) · *private* |
 | order_idx_in_shift | int | 1 = first task of the shift |
@@ -24,17 +31,20 @@ One row = one task offer accepted in the courier app. A task can contain several
 | venue | str | pickup venue(s) as listed in the app |
 | pickup_venues | str | pickups separated by " \| " |
 | n_pickups, n_deliveries | int | stacked tasks have more than 1 |
-| anchor_venue | str | first pickup that has coordinates; the courier is assumed to be near it |
+| anchor_venue | str | history: first pickup with coordinates · app: nearest known venue within 100 m (empty if none) |
 | venue_area | str | district of the anchor venue |
-| geocode_quality | str | `osm` OpenStreetMap feature · `address` street address · `mall` shopping centre location · `area` district centroid · `unknown` not placed |
+| geocode_quality | str | `osm` OpenStreetMap feature · `address` street address · `mall` shopping centre location · `area` district centroid · `unknown` not placed · `gps` app row |
 | venue_lat, venue_lon | float | anchor venue coordinates (WGS84) |
-| courier_lat, courier_lon | float | **simulated** courier position, 20–50 m from the venue |
-| courier_offset_m, courier_bearing_deg | float | the random offset used |
+| courier_lat, courier_lon | float | history: **simulated** 20–50 m from the venue · app: real GPS at the tap · *private* |
+| courier_offset_m | float | history: the random offset · app: distance to the matched venue · *private* |
+| courier_bearing_deg | float | history only: random bearing · *private* |
+| gps_accuracy_m | float | app only: GPS accuracy of the fix · *private* |
 | h3_r8, h3_r9 | str | H3 cell of the courier position (res 8 ≈ 0.74 km², res 9 ≈ 0.11 km²) |
 | distance_km | float | task distance shown in the app |
 | gap_since_prev_min | float | minutes since the previous task in the same shift |
 | est_task_min | float | estimated duration of this task: 6 + distance/14 km/h + 4 per extra stop |
-| est_wait_min | float | gap_since_prev_min − previous task's est_task_min, floored at 0. **Main target.** |
+| wait_min | float | **Main target.** App: measured, from the last *Free again* (or *Start shift*) to *Got order*. History: estimated as gap_since_prev_min − previous task's est_task_min, floored at 0 |
+| wait_is_estimated | bool | True for history rows |
 | temp_c, apparent_temp_c | float | air and feels-like temperature, °C |
 | precip_mm, rain_mm, snowfall_cm | float | in the task's hour |
 | precip_prev2h_mm | float | precipitation in the two hours before |
@@ -47,7 +57,7 @@ One row = one task offer accepted in the courier app. A task can contain several
 ## hex_training_table.csv
 
 Grouped by `h3_r8 × time_bucket × day_type × weather_class`: `n_orders`, `n_shifts`,
-`median_est_wait_min`, `mean_distance_km`, `top_venue`, hexagon centre.
+`median_wait_min`, `mean_distance_km`, `top_venue`, hexagon centre.
 
 ## spot_ranking.csv
 

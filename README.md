@@ -1,94 +1,127 @@
 # Spotorders
 
-**Where should a bike courier wait to get the next order fastest?**
-Spotorders is a personal GIS project: an Android logger plus a Python pipeline that learns, from my own
-Wolt courier history in Helsinki, which spots give the shortest wait for the next task at a given hour,
-weekday and weather.
+**Where should I wait so the next delivery order comes fastest?**
 
-> Independent hobby project. Not affiliated with, endorsed by or connected to Wolt. It uses no Wolt API and
-> does not scrape or automate the Wolt apps: all data are my own records, transcribed by hand or logged on my phone.
+Spotorders is an Android app and a small GIS pipeline that learn this from my own delivery history in Helsinki.
+I built it for myself. It is not a product, and it is not connected to Wolt in any way.
 
 ![Tasks by weekday and hour](figures/weekday_hour.png)
 
-## How success is measured
+## Why I built this
 
-Orders partly arrive at random, so "95 % accuracy" is meaningless here. The test is simpler:
-**is my average wait until the next order shorter in recommended spots than in my usual spots?**
-That before/after comparison will be added here once the logger has collected enough shifts.
+I'm a master's student in Ecology and Evolutionary Biology at the University of Helsinki. Like many
+international students in Finland, I have not been able to find a job in my field or even a regular part-time
+job, so I deliver food for Wolt on an e-bike to pay the bills.
 
-## Status
+The hardest part of the job is not the riding. It's the waiting. Between orders you stand outside a restaurant
+or a shopping centre, in the rain or at minus five, not knowing whether the next order will come in two
+minutes or in forty. Waiting time is unpaid. Pick the wrong corner on a Tuesday afternoon and you can lose
+half an hour. Pick the right one on a Friday evening and the orders come back to back.
 
-| Phase | What | Status |
-|---|---|---|
-| 1 | First dataset from courier-history screenshots, weather join, first heatmaps | **done** (this commit) |
-| 2 | Android logger: foreground GPS, one-tap "got order" / "free again", CSV export | skeleton in `android/` |
-| 3 | Hexagon map of expected wait in the app, nearest good spot | planned |
-| 4 | Model: smoothed statistics → gradient boosting, restaurant density as prior | baseline in `pipeline/baseline.py` |
+After a few months I noticed I was already guessing: Redi on Friday nights, Arabia at lunch, Hakaniemi when it
+rains. As an ecologist, I recognised the problem. It's what animals do when they forage: choose a patch,
+wait, decide when to move. Ecologists model exactly that. So instead of guessing, I started measuring.
 
-## The first dataset (Sep–Nov 2026)
+Spotorders is the result: a one-tap logger on my phone and a pipeline that turns my shifts into a map of
+where I wait the least, by hour, weekday and weather.
 
-189 tasks (196 deliveries) over 43 shifts on 31 days, transcribed from 33 screenshots of the courier app's
-earnings history. Every daily total in the transcription matches the total shown in the app.
+## How it works
 
-How each row was built:
+```
+ phone (during a shift)                    GitHub
+ ─────────────────────                     ──────────────────────────────────────────────
+ Start shift ─┐                            spotorders-data (PRIVATE)
+ Got order ───┼─ saved on phone ──upload──► live/events.csv   every button press
+ Free again ──┤  + GPS every 15 s          live/fixes/*.csv  GPS track
+ End shift ───┘                                   │
+                                                  ▼  workflow starts within a minute
+                                           spotorders (PUBLIC, this repo)
+                                           pipeline: waits, weather, H3 hexagons
+                                           → data/sample/*.csv, figures/*.png (summaries only)
+```
 
-1. **Pickup venue → coordinates.** 81 of 86 venues were placed from OpenStreetMap, a street address, or the
-   shopping centre they sit in (Redi, Arabia). Seven are only known by district and use the district centroid;
-   five could not be placed and have no position (`geocode_quality` says which is which).
-2. **Courier position.** When an offer arrives I am usually waiting near a restaurant, so the position is
-   simulated as a random point **20–50 m from the pickup venue** (uniform over the ring, fixed seed). These are
-   stand-ins until real GPS logs from the app replace them.
-3. **Waiting time.** The app gives one timestamp per task. Within a shift, the gap between two tasks minus an
-   estimate of how long the previous task took (6 min handling + distance at 14 km/h + 4 min per extra
-   stop) gives `est_wait_min`. Median: about 16 minutes.
-4. **Weather.** Hourly Open-Meteo data for central Helsinki (temperature, feels-like, precipitation, rain,
-   snow, wind, humidity, cloud cover, WMO code), joined on the task's hour, plus rain in the previous two hours.
-5. **Features for modelling.** Weekday, weekend, Friday/Saturday evening, cyclic hour, time bucket, sun elevation
-   and darkness, H3 cells at resolution 8 and 9.
+1. **During a shift I only press buttons.** "Got order" and "Free again" sit in the phone's notification,
+   so I never open the app on the road. Each press saves the time and my GPS position.
+2. **The app uploads automatically** to a private GitHub repo whenever there is internet. With no signal,
+   it waits and retries.
+3. **Each new order triggers a GitHub Actions run** that rebuilds the dataset: it measures how long I waited
+   (from "Free again" to "Got order"), matches the position to the nearest restaurant, adds the weather from
+   Open-Meteo, and updates the public summaries and charts in this repo.
+
+## Privacy by design
+
+My GPS track shows where I live and when I work, so I treat it as private from the start:
+
+- **Raw data never enter this public repo.** Button presses and GPS tracks go only to a private repo.
+  `data/private/` is git-ignored here.
+- **What is public:** counts and waiting times per hexagon (H3, about 170 m to 900 m across), times rounded
+  to 15 minutes, no calendar dates, no exact coordinates, no earnings.
+- **Drop-off locations are never recorded**, so nothing about customers is ever stored.
+- The GitHub token on the phone is encrypted with the Android Keystore and only sent to api.github.com.
+- One-tap input only, from the notification. The app is never meant to be used while riding.
+
+## What the data say so far
+
+The first dataset comes from 33 screenshots of my courier history, September to November 2026:
+**189 tasks over 43 shifts on 31 days**. I transcribed them by hand and checked every daily total
+against the app. Early observations, from a small sample:
+
+- Friday evening, 18:00 to 21:00, is by far my busiest window.
+- My estimated median wait between tasks is about **16 minutes**: about 13 at lunch, about 17.5 late in the evening.
+- Waits were shorter in rainy hours (about 13 vs 17 minutes), which matches the idea that people order
+  more when it rains.
 
 ![Where tasks started](figures/hex_map.png)
 
-### Files
+For the screenshot history, my position is simulated 20–50 m from the restaurant, and the wait is estimated
+(one timestamp per task). From now on, the app records both for real, and `wait_is_estimated` tells the two apart.
 
-| File | Content | In git? |
+## Success measure
+
+Orders partly arrive at random, so prediction accuracy is not the goal. The test is:
+**is my average wait shorter in recommended spots than in my usual spots?**
+I'll add a before/after chart here once the app has logged enough shifts.
+
+## Roadmap
+
+| Phase | What | Status |
 |---|---|---|
-| `data/private/orders_raw.csv` | the transcription | no |
-| `data/private/orders_enriched.csv` | full table, exact times and pay | no |
-| `data/sample/orders_public.csv` | same rows, **no pay, no calendar date, times rounded to 15 min** | yes |
-| `data/sample/hex_training_table.csv` | counts and median wait per hexagon × time bucket × day type × weather | yes |
-| `data/sample/spot_ranking.csv` | smoothed expected wait per hexagon and time bucket (baseline) | yes |
-| `data/reference/venues.csv` | pickup venues with coordinates and how they were found | yes |
-| `data/reference/weather_hourly.csv` | the weather hours used | yes |
+| 1 | Dataset from screenshots, weather join, first heatmaps | done |
+| 2 | Android logger: GPS, notification buttons, automatic upload to GitHub | done, in daily use |
+| 3 | Hexagon map in the app: expected wait now, nearest good spot | next |
+| 4 | Model: smoothed statistics → gradient boosting, OpenStreetMap restaurant density as a prior | baseline in `pipeline/baseline.py` |
 
-Column definitions: [`docs/data_dictionary.md`](docs/data_dictionary.md).
+## Repo layout
 
-## Run it
+| Path | What |
+|---|---|
+| `android/` | Kotlin, Jetpack Compose, Room, WorkManager, fused location |
+| `pipeline/` | Python: `build_dataset`, `live` (app log → orders), `weather`, `geo`, `baseline`, `figures` |
+| `data/sample/` | public, privacy-safe tables updated by the workflow |
+| `data/reference/` | restaurant coordinates and the weather hours for the screenshot history |
+| `docs/` | [phone setup](docs/INSTALL.md), [data dictionary](docs/data_dictionary.md) |
+| `.github/workflows/` | APK build and release; dataset update after each upload |
+
+## Run the pipeline yourself
 
 ```bash
 pip install -r requirements.txt
-python -m pipeline.build_dataset   # needs data/private/orders_raw.csv
+python -m pipeline.build_dataset   # needs data/private (the private data repo)
 python -m pipeline.baseline
 python -m pipeline.figures
 ```
 
-The Android project in `android/` opens in Android Studio (Kotlin, Jetpack Compose, Room,
-fused location). It has not been built in CI yet.
-
-## Privacy rules for this repo
-
-- No raw GPS tracks and no exact pickup or drop-off times tied to addresses are committed.
-  `data/private/` is git-ignored.
-- Published task data have no earnings, no calendar dates, and times rounded to 15 minutes.
-- Drop-off locations are never recorded.
-- The app only uses one-tap input and is never meant to be used while riding.
-
 ## Limitations
 
-- 189 tasks from one courier is a small sample. Rankings with `n < 5` are mostly the prior.
-- Positions are simulated, not measured. The waiting time is an estimate, because the app history has
-  one timestamp per task and no "became free" time. The logger app fixes both.
-- The wait is attributed to the spot where the next offer arrived, which favours places I already go to.
-  Restaurant density from OpenStreetMap will be used as a prior for places with little data.
+- One courier, a few hundred tasks: hexagons with fewer than 5 observations mostly show the prior.
+- The wait is attributed to where the next offer arrived, which favours places I already go to.
+  OpenStreetMap restaurant density will be the prior for unexplored places.
+- Platform dispatch rules are unknown and change. This only describes what happened to me.
+
+## Disclaimer
+
+Independent personal project. Not affiliated with, endorsed by or connected to Wolt. It uses no Wolt API and
+does not read, scrape or automate the Wolt apps: all data are my own button presses and my own records.
 
 ## License
 

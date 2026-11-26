@@ -11,6 +11,11 @@ import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Polygon
 
+
+def top_name(s):
+    vc = s.replace("", None).dropna().value_counts()
+    return vc.index[0] if len(vc) else "(no known venue)"
+
 ROOT = Path(__file__).resolve().parents[1]
 BLUES = LinearSegmentedColormap.from_list(
     "seq_blue", ["#cce3fd", "#9dc8f7", "#6aabf1", "#338ced", "#2370cd", "#1757ac", "#0e3d7e"])
@@ -55,7 +60,7 @@ def hex_map(df):
         ring = [(lng, lat) for lat, lng in h3.cell_to_boundary(cell)]
         ax.add_patch(Polygon(ring, closed=True, facecolor=BLUES(n / vmax), edgecolor="white", lw=2))
     # label the five busiest hexes in a column to the right, with leader lines (no collisions)
-    top = d.groupby("h3_r9").anchor_venue.agg(lambda s: s.value_counts().index[0])
+    top = d.groupby("h3_r9").anchor_venue.agg(top_name)
     lab = sorted(counts.index[:5], key=lambda c: -h3.cell_to_latlng(c)[0])
     lngs_all = [h3.cell_to_latlng(c)[1] for c in counts.index]
     lats_all = [h3.cell_to_latlng(c)[0] for c in counts.index]

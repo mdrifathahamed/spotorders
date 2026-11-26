@@ -36,15 +36,59 @@ def weather_class(code: int, temp_c: float) -> str:
     return "dry"
 
 
-def fetch_hourly(start: str, end: str, lat=60.19, lon=24.96, tz="Europe/Helsinki") -> pd.DataFrame:
+def fetch_hourly(start: str, end: str, lat=60.19, lon=24.96, tz="Europe/Helsinki",
+                 endpoint: str = "archive") -> pd.DataFrame:
+    """endpoint="archive" (ERA5, ~5 days behind) or "historical" (forecast archive, up to today)."""
     import requests  # imported lazily so the offline pipeline has no network dependency
 
-    url = "https://archive-api.open-meteo.com/v1/archive"
+    url = {"archive": "https://archive-api.open-meteo.com/v1/archive",
+           "historical": "https://historical-forecast-api.open-meteo.com/v1/forecast"}[endpoint]
     params = dict(latitude=lat, longitude=lon, start_date=start, end_date=end,
                   hourly=",".join(VARS), timezone=tz)
-    js = requests.get(url, params=params, timeout=60).json()
+    r = requests.get(url, params=params, timeout=60)
+    r.raise_for_status()
+    js = r.json()
     df = pd.DataFrame(js["hourly"]).rename(columns=RENAME)
     t = pd.to_datetime(df.pop("time"))
     df.insert(0, "date", t.dt.strftime("%Y-%m-%d"))
     df.insert(1, "hour", t.dt.hour)
     return df
+
+
+def load_weather(root, timestamps: pd.Series) -> pd.DataFrame:
+    """Hourly weather for every date in `timestamps`.
+
+    Uses the shipped reference file and a private cache, and downloads any missing
+    days from Open-Meteo (works in GitHub Actions; silently skipped when offline).
+    """
+    from pathlib import Path
+
+    root = Path(root)
+    ref = pd.read_csv(root / "data/reference/weather_hourly.csv")
+    cache_f = root / "data/private/weather_cache.csv"
+    cache = pd.read_csv(cache_f) if cache_f.exists() else pd.DataFrame(columns=ref.columns)
+    wx = pd.concat([ref, cache], ignore_index=True)
+
+    # a day counts as complete only if all 24 hours are there (reference holds shift hours only)
+    need = set(timestamps.dt.strftime("%Y-%m-%d"))
+    full_days = set(cache.groupby("date").hour.nunique().loc[lambda s: s >= 24].index) if len(cache) else set()
+    have_hours = set(zip(wx.date, wx.hour))
+    want = {(t.strftime("%Y-%m-%d"), t.hour) for t in timestamps}
+    missing_days = sorted({d for d, h in want - have_hours} | (need - full_days - set(ref.date)))
+    today = pd.Timestamp.now(tz="Europe/Helsinki").strftime("%Y-%m-%d")
+    missing_days = [d for d in missing_days if d <= today]
+
+    if missing_days:
+        try:
+            new = fetch_hourly(missing_days[0], missing_days[-1], endpoint="historical")
+            new = new[new.date.isin(missing_days)]
+            cache = (pd.concat([cache, new], ignore_index=True)
+                       .drop_duplicates(["date", "hour"], keep="last").sort_values(["date", "hour"]))
+            cache_f.parent.mkdir(parents=True, exist_ok=True)
+            cache.to_csv(cache_f, index=False)
+            wx = pd.concat([ref, cache], ignore_index=True)
+            print(f"weather: fetched {len(missing_days)} day(s)")
+        except Exception as e:  # offline / API down: keep going without those hours
+            print(f"weather: could not fetch {len(missing_days)} day(s): {e}")
+
+    return wx.drop_duplicates(["date", "hour"], keep="first")
