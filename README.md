@@ -159,8 +159,7 @@ needs a billing account, its terms forbid showing Places data on a non-Google ma
 
 - **189 tasks (196 deliveries) over 43 shifts on 31 days**, 1 September to 25 November 2026, transcribed by hand from
   33 screenshots of the courier history.
-- **Checked against the source:** every daily total in the transcription matches the courier app, and so does the
-  16–31 October sum (€223.72).
+- **Checked against the source:** every daily total in the transcription matches the courier app.
 - **Where the venues are:** 81 of the 86 pickup venues are placed from OpenStreetMap, a street address or the shopping centre
   they sit in; 7 only at a district centroid; 5 could not be placed.
 - **Where I was (history rows):** the screenshots carry no GPS, so my position is simulated as a random point 20–50 m from the
@@ -261,27 +260,22 @@ live. The project is therefore built so that none of that can leak.
 
 ## 12. What the data say so far
 
-From the 189 historical tasks (gross earnings before costs; a small sample, so every figure below is provisional):
+From the 189 historical tasks (a small sample, so every figure below is provisional):
 
 | Measure | Value |
 |---|---|
-| Earnings per active hour | ~€9.20 (first to last order of a shift) |
-| Orders per hour | ~1.9 |
-| Earnings while actually on a task | ~€0.32–0.39 per minute (~€19–23 per hour) |
+| Orders per active hour | ~1.9 (first to last order of a shift) |
 | Time spent idle | ~35 of every 60 minutes |
 | Median wait between tasks | ~16 min (lunch ~13, late evening ~17.5) |
 | Rainy vs dry hours | ~13 vs ~17 min median wait |
-| Tasks paid at the €3.50 minimum | 36 % |
-| Double-pickup or stacked tasks | €7.73 per task vs €4.21 for single tasks, at a similar rate per km |
-| Friday evenings | 27 % of all earnings |
-| Best and slowest weekdays | Tue ~€10.1/h, Fri ~€9.8/h · Mon ~€7.6/h, Sun ~€6.4/h |
+| Busiest window | Friday and Saturday evenings |
 
 ![Tasks by weekday and hour](figures/weekday_hour.png)
 
-Why is waiting, rather than riding distance, the bigger cost? Once a task starts, the pay per minute barely depends on how
-far it goes, because short trips are protected by the minimum fee; what separates a good hour from a bad one is the idle
-time in between. Cutting the wait by five minutes per order would be worth roughly **€1.30 per hour**, which is exactly the
-gain the map is meant to deliver. Likewise, why should rainy hours give shorter waits? The likely explanation is that more
+Why is waiting, rather than riding, the bigger cost? On a typical shift I spent more than half of every hour standing
+still, so what separates a good hour from a bad one is the idle time between tasks rather than the tasks themselves.
+Cutting the wait by five minutes per order would add about one extra order every three hours, which is the gain
+the map is meant to deliver. Likewise, why should rainy hours give shorter waits? The likely explanation is that more
 people order food when it rains, although with only 50 rainy-hour tasks this remains a hint rather than a result.
 
 ![Where tasks started](figures/hex_map.png)
@@ -373,7 +367,7 @@ Full schema: [`docs/data_dictionary.md`](docs/data_dictionary.md).
 | 5 | Route recording: stays and moves from a 15 s GPS track, as training data for the model | Done |
 | 6 | **A/B test:** alternate shifts following the map and my usual spots → before/after chart | Next |
 | 7 | **Move-or-stay nudge:** vibrate and point the way when I have waited too long in a red hexagon | Next |
-| 8 | Pay per order: weekly screenshot upload, read in Actions and matched to O presses (€/h per spot) | Planned |
+| 8 | Pay per order: weekly screenshot upload, read in Actions and matched to O presses (kept private) | Planned |
 | 9 | Weather-aware map (rain, snow and dry variants) using the next-hour forecast | Planned |
 | 10 | Gradient boosting on the per-order and per-stay features, with time-based validation | Planned |
 | 11 | Finnish public holidays in the opening-hours evaluation | Planned |
