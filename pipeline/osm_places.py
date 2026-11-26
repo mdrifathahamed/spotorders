@@ -62,11 +62,28 @@ def fetch() -> pd.DataFrame:
     (nwr["amenity"~"^(restaurant|fast_food|cafe|food_court)$"]({s},{w},{n},{e});
      nwr["shop"~"^(supermarket|convenience|bakery)$"]({s},{w},{n},{e}););
     out center tags;"""
-    r = requests.post("https://overpass-api.de/api/interpreter", data={"data": q}, timeout=180,
-                      headers={"User-Agent": "spotorders (github.com/mdrifathahamed/spotorders)"})
-    r.raise_for_status()
+    import time
+
+    servers = ["https://overpass-api.de/api/interpreter",
+               "https://overpass.kumi.systems/api/interpreter",
+               "https://overpass.private.coffee/api/interpreter"]
+    last_err = None
+    for attempt in range(6):            # public servers are often busy: rotate and back off
+        url = servers[attempt % len(servers)]
+        try:
+            r = requests.post(url, data={"data": q}, timeout=180,
+                              headers={"User-Agent": "spotorders (github.com/mdrifathahamed/spotorders)"})
+            r.raise_for_status()
+            elements = r.json()["elements"]
+            break
+        except Exception as ex:
+            last_err = ex
+            print(f"osm: {url} failed ({ex}), retrying")
+            time.sleep(10 * (attempt + 1))
+    else:
+        raise RuntimeError(f"all Overpass servers failed: {last_err}")
     rows = []
-    for el in r.json()["elements"]:
+    for el in elements:
         t = el.get("tags", {})
         lat = el.get("lat", el.get("center", {}).get("lat"))
         lon = el.get("lon", el.get("center", {}).get("lon"))
