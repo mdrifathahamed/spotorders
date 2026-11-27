@@ -24,17 +24,18 @@ late,4.0,881126d04dfffff,60.2,24.93,Hesburger Helsinki Pasila Tripla,1,16.0,19.8
 late,5.0,881126d06dfffff,60.18,24.95,McDonald's Helsinki Hakaniemi,5,19.97,20.36,20.86
 late,6.0,881126d061fffff,60.19,24.96,Mojo Street Food,6,21.07,20.99,20.86
 late,7.0,881126d06bfffff,60.19,24.96,King Kebab Vallila,4,34.08,27.47,20.86
-lunch,1.0,881126d00dfffff,60.2,24.97,K-Supermarket Arabia,14,8.91,9.82,12.99
-lunch,2.0,881126d331fffff,60.17,24.95,Pizza Hut Citykäytävä,3,5.69,9.86,12.99
-lunch,3.0,881126d00bfffff,60.21,24.97,Krung Thep Thai Bistro Arabia,1,0.0,10.39,12.99
-lunch,3.0,881126d06bfffff,60.19,24.96,McDonald's Helsinki Teollisuuskatu,1,0.0,10.39,12.99
-lunch,3.0,881126d317fffff,60.18,24.94,(no known venue),1,0.0,10.39,12.99
-lunch,6.0,881126d339fffff,60.17,24.93,Eat Poke Kamppi,1,2.3,10.85,12.99
-lunch,7.0,881126d001fffff,60.21,24.98,Subway Arabia,1,3.91,11.17,12.99
-lunch,8.0,881126d069fffff,60.19,24.95,The Frogg,1,9.03,12.2,12.99
-lunch,9.0,881126d05bfffff,60.23,24.95,Krung Thep Thai Bistro Oulunkylä,1,9.31,12.25,12.99
-lunch,10.0,881126d06dfffff,60.18,24.95,Lie Mi Kallio,15,12.74,12.8,12.99
-lunch,11.0,881126d063fffff,60.19,24.97,Mashiro Vallila,1,20.73,14.54,12.99
-lunch,12.0,881126d061fffff,60.19,24.96,Picnic Sörnäinen,3,17.47,14.91,12.99
-lunch,13.0,881126d067fffff,60.19,24.97,KFC Redi,4,44.93,28.96,12.99
+lunch,1.0,881126d331fffff,60.17,24.95,Pizza Hut Citykäytävä,3,5.69,9.78,12.84
+lunch,2.0,881126d00dfffff,60.2,24.97,K-Supermarket Arabia,14,8.91,9.78,12.84
+lunch,3.0,881126d00bfffff,60.21,24.97,Krung Thep Thai Bistro Arabia,1,0.0,10.27,12.84
+lunch,3.0,881126d06bfffff,60.19,24.96,McDonald's Helsinki Teollisuuskatu,1,0.0,10.27,12.84
+lunch,3.0,881126d317fffff,60.18,24.94,(no known venue),1,0.0,10.27,12.84
+lunch,6.0,881126d339fffff,60.17,24.93,Eat Poke Kamppi,1,2.3,10.73,12.84
+lunch,7.0,881126d001fffff,60.21,24.98,Subway Arabia,1,3.91,11.05,12.84
+lunch,8.0,881126d319fffff,60.19,24.91,(no known venue),1,5.88,11.45,12.84
+lunch,9.0,881126d069fffff,60.19,24.95,The Frogg,1,9.03,12.08,12.84
+lunch,10.0,881126d05bfffff,60.23,24.95,Krung Thep Thai Bistro Oulunkylä,1,9.31,12.13,12.84
+lunch,11.0,881126d06dfffff,60.18,24.95,Lie Mi Kallio,15,12.74,12.76,12.84
+lunch,12.0,881126d063fffff,60.19,24.97,Mashiro Vallila,1,20.73,14.42,12.84
+lunch,13.0,881126d061fffff,60.19,24.96,Picnic Sörnäinen,3,17.47,14.83,12.84
+lunch,14.0,881126d067fffff,60.19,24.97,KFC Redi,4,44.93,28.88,12.84
 morning,1.0,881126d00dfffff,60.2,24.97,Pakettiautomaatti Lidl Arabia,1,15.63,15.63,15.63

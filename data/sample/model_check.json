@@ -1,36 +1,36 @@
 {
   "best_half_life_days": 14,
   "test_days": 14,
-  "test_waits": 70,
+  "test_waits": 71,
   "models": {
     "old": {
-      "log_score": -3.879,
+      "log_score": -3.854,
       "log_score_se": 0.17,
-      "brier_10min": 0.228
+      "brier_10min": 0.225
     },
     "bucket_only": {
-      "log_score": -3.878,
+      "log_score": -3.86,
       "log_score_se": 0.124,
-      "brier_10min": 0.238
+      "brier_10min": 0.237
     },
     "bayes_hlinf": {
-      "log_score": -3.922,
+      "log_score": -3.907,
       "log_score_se": 0.103,
-      "brier_10min": 0.253
+      "brier_10min": 0.254
     },
     "bayes_hl30": {
-      "log_score": -3.912,
+      "log_score": -3.895,
       "log_score_se": 0.104,
       "brier_10min": 0.247
     },
     "bayes_hl14": {
-      "log_score": -3.911,
+      "log_score": -3.892,
       "log_score_se": 0.105,
       "brier_10min": 0.244
     },
     "bayes_hl7": {
-      "log_score": -3.92,
-      "log_score_se": 0.105,
+      "log_score": -3.901,
+      "log_score_se": 0.106,
       "brier_10min": 0.242
     }
   },
@@ -38,17 +38,17 @@
   "gamma_now": 0.0,
   "multipliers_now": {
     "weekend": {
-      "estimate": 0.689,
-      "lo95": 0.39,
-      "hi95": 1.215,
+      "estimate": 0.686,
+      "lo95": 0.389,
+      "hi95": 1.211,
       "n": 17,
       "used": false,
       "factor": 1.0
     },
     "rain": {
-      "estimate": 1.099,
-      "lo95": 0.729,
-      "hi95": 1.658,
+      "estimate": 1.095,
+      "lo95": 0.727,
+      "hi95": 1.652,
       "n": 34,
       "used": false,
       "factor": 1.0
