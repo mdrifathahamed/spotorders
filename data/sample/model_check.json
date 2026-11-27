@@ -38,17 +38,17 @@
   "gamma_now": 0.0,
   "multipliers_now": {
     "weekend": {
-      "estimate": 0.69,
-      "lo95": 0.391,
-      "hi95": 1.217,
+      "estimate": 0.698,
+      "lo95": 0.395,
+      "hi95": 1.233,
       "n": 17,
       "used": false,
       "factor": 1.0
     },
     "rain": {
-      "estimate": 1.102,
-      "lo95": 0.731,
-      "hi95": 1.661,
+      "estimate": 1.116,
+      "lo95": 0.74,
+      "hi95": 1.683,
       "n": 34,
       "used": false,
       "factor": 1.0
