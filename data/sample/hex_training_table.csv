@@ -15,17 +15,17 @@ h3_r8,time_bucket,day_type,weather_class,n_orders,n_shifts,median_wait_min,mean_
 881126d06bfffff,dinner,weekday,dry,4,4,6.93,1.158,Wolt Market Vallila,60.195,24.958
 881126d06bfffff,late,weekday,dry,3,2,35.69,1.623,King Kebab Vallila,60.195,24.958
 881126d067fffff,late,weekday,dry,3,2,17.39,1.633,Taco Bell Redi,60.185,24.974
-881126d00dfffff,dinner,weekend,wet,3,1,6.545,1.737,Subway Arabia,60.2,24.967
+881126d06dfffff,dinner,weekend,dry,3,2,27.27,0.85,McDonald's Helsinki Hakaniemi,60.181,24.952
 881126d061fffff,lunch,weekday,dry,3,2,16.89,1.74,Picnic Sörnäinen,60.187,24.961
 881126d00dfffff,afternoon,weekday,dry,3,3,21.805,1.287,K-Supermarket Arabia,60.2,24.967
+881126d06dfffff,lunch,weekday,cold_dry,3,1,3.54,,kot.KALLIO,60.181,24.952
+881126d00dfffff,dinner,weekend,wet,3,1,6.545,1.737,Subway Arabia,60.2,24.967
 881126d331fffff,lunch,weekday,dry,3,3,0.0,2.257,Pizza Hut Citykäytävä,60.168,24.946
 881126d06dfffff,afternoon,weekend,dry,3,1,14.64,1.77,Subway Hakaniemi,60.181,24.952
-881126d06dfffff,dinner,weekend,dry,3,2,27.27,0.85,McDonald's Helsinki Hakaniemi,60.181,24.952
-881126d009fffff,dinner,weekday,wet,2,2,,1.455,Pizzeria Parmesan Kumpula,60.208,24.964
 881126d001fffff,dinner,weekday,dry,2,2,44.765,2.37,Swagatam,60.206,24.977
-881126d06dfffff,lunch,weekday,wet,2,1,2.535,1.17,Lie Mi Kallio,60.181,24.952
+881126d009fffff,dinner,weekday,wet,2,2,,1.455,Pizzeria Parmesan Kumpula,60.208,24.964
 881126d067fffff,dinner,weekend,dry,2,1,10.925,3.44,Pav Paradise Kalasatama,60.185,24.974
-881126d06dfffff,lunch,weekday,cold_dry,2,1,14.465,,kot.KALLIO,60.181,24.952
+881126d06dfffff,lunch,weekday,wet,2,1,2.535,1.17,Lie Mi Kallio,60.181,24.952
 881126d067fffff,late,weekday,wet,2,2,18.16,0.83,Elias Döner Kebab Redi,60.185,24.974
 881126d15bfffff,dinner,weekday,wet,2,2,5.865,2.985,The Butter Boys,60.178,24.978
 881126d00bfffff,lunch,weekday,dry,2,1,0.0,1.96,Krung Thep Thai Bistro Arabia,60.214,24.973
